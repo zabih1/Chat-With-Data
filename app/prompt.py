@@ -52,7 +52,7 @@ Provide a concise, informative summary of the YouTube video transcript below.
 """
 
 
-text_to_sql_templates = template = """  
+text_to_sql_templates = """  
 
 Given an input question, generate a syntactically correct `{dialect}` query to retrieve relevant results. If the user does not specify the number of examples, limit the query to `{top_k}` results. Order the results by a relevant column to return the most meaningful examples.  
 

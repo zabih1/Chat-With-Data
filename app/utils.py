@@ -1,27 +1,30 @@
-from langchain_weaviate.vectorstores import WeaviateVectorStore
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain.chat_models import init_chat_model
-
 import weaviate
 from weaviate.classes.init import Auth
-from config import gemini_api_key, groq_api_key ,weaviate_url, weaviate_api_key
+import sys
+import os
+from langchain_weaviate.vectorstores import WeaviateVectorStore
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-def gemini_model():
-    llm = ChatGoogleGenerativeAI(
-    api_key=gemini_api_key,
-    model="gemini-2.0-flash"
-)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def llama_model():
-    llm = init_chat_model("llama3-8b-8192", model_provider="groq")
-    return llm
+from config import gemini_api_key, weaviate_url, weaviate_api_key
 
-llm = llama_model()
-llm.invoke("tell me a joke")
 
-def mistral_model():
-    llm = init_chat_model("mistral", model_provider="groq")
 
+# >>>>>>>>>> 📌 Split documents. <<<<<<<<<<<<<<<<<<<<<<
+
+def split_content(documents, chunk_size=1000, chunk_overlap=200):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+    chunks = text_splitter.split_documents(documents)
+
+    return chunks
+
+
+# >>>>>>>>>> 📌 Setup vector database. <<<<<<<<<<<<<<<<<<<<<<
 def setup_vector_database(docs):
     embeddings = GoogleGenerativeAIEmbeddings(
         google_api_key=gemini_api_key, 
@@ -36,3 +39,5 @@ def setup_vector_database(docs):
 
     vector_db = WeaviateVectorStore.from_documents(docs, embeddings, client=client)
     return vector_db
+
+
