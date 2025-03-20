@@ -13,18 +13,19 @@ from config import gemini_api_key, weaviate_url, weaviate_api_key
 
 
 MODELS = [
-    {"id": "llama", "name": "Llama 3", "description": "A fast and efficient model for general summaries"},
-    {"id": "gemini", "name": "Gemini", "description": "Google's Gemini model for detailed analysis"},
-    {"id": "mistral", "name": "Mistral", "description": "Specialized for concise and accurate summaries"},
-    {"id": "deepseek", "name": "DeepSeek", "description": "Optimized for deep technical content"}
+    {"id": "llama", "name": "Llama 3"},
+    {"id": "gemini", "name": "Gemini"},
+    {"id": "mistral", "name": "Mistral"},
+    {"id": "deepseek", "name": "DeepSeek"}
 ]
 
-MODEL_DISPLAY_NAMES = {
-    'llama': 'Llama 3',
-    'gemini': 'Gemini',
-    'mistral': 'Mistral',
-    'deepseek': 'DeepSeek'
-}
+def get_model_display_name(model_id):
+    for model in MODELS:
+        if model["id"] == model_id:
+            return model["name"]
+    return model_id  
+
+
 
 def process_markdown(text):
     processed = text.replace('• ', '* ')
@@ -33,6 +34,9 @@ def process_markdown(text):
     processed = processed.replace('**Key Points:**', '\n**Key Points:**')
     processed = processed.replace('**Conclusion:**', '\n**Conclusion:**')
     return processed
+
+
+
 # >>>>>>>>>> 📌 Split documents. <<<<<<<<<<<<<<<<<<<<<<
 
 def split_content(documents, chunk_size=1000, chunk_overlap=200):
@@ -63,14 +67,4 @@ def setup_vector_database(docs):
 
 
 
-def process_markdown(text):
-    """Process special markdown elements for proper rendering"""
-    processed = text.replace('• ', '* ')
-    
-    # Add line breaks before headings if they don't exist
-    processed = processed.replace('**Title:**', '\n**Title:**')
-    processed = processed.replace('**Main Topic:**', '\n**Main Topic:**')
-    processed = processed.replace('**Key Points:**', '\n**Key Points:**')
-    processed = processed.replace('**Conclusion:**', '\n**Conclusion:**')
-    
-    return processed
+
