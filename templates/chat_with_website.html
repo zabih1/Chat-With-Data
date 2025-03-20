@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Website</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+        }
+        h1 {
+            color: #cc0000;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn-primary {
+            background-color: #cc0000;
+            border-color: #cc0000;
+        }
+        .btn-primary:hover {
+            background-color: #990000;
+            border-color: #990000;
+        }
+        .spinner-border {
+            display: none;
+            margin: 20px auto;
+        }
+        .answer-text {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat with Website</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="website-url" class="form-label">Website URL:</label>
+                    <input type="text" class="form-control" id="website-url" placeholder="https://example.com">
+                    <small class="text-muted">Must have a sitemap.xml (e.g. https://example.com/sitemap.xml)</small>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="useSampleWebsite()">Use Sample Website</button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="question" class="form-label">Your Question:</label>
+                    <textarea class="form-control" id="question" rows="3" placeholder="Ask a question about the website content..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="model-select" class="form-label">Select LLM Model:</label>
+                    <select class="form-select" id="model-select">
+                        <option value="deepseek">DeepSeek (Default)</option>
+                        <option value="llama">Llama 3</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="mistral">Mistral</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary w-100" id="submit-btn">Get Answer</button>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <div class="spinner-border text-danger" id="loader" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        
+        <div id="result" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>Answer</h3>
+                    <div class="mt-2">Answered by: <span id="model-used" class="model-tag">DeepSeek</span></div>
+                    <div id="answer-text" class="answer-text mt-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Load saved values if they exist
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('lastWebsiteUrl');
+            const savedQuestion = localStorage.getItem('lastQuestion');
+            const savedModel = localStorage.getItem('lastModel');
+            
+            if (savedUrl) {
+                document.getElementById('website-url').value = savedUrl;
+            }
+            
+            if (savedQuestion) {
+                document.getElementById('question').value = savedQuestion;
+            }
+            
+            if (savedModel) {
+                document.getElementById('model-select').value = savedModel;
+            }
+        });
+        
+        document.getElementById('submit-btn').addEventListener('click', async () => {
+            const websiteUrl = document.getElementById('website-url').value.trim();
+            const question = document.getElementById('question').value.trim();
+            const model = document.getElementById('model-select').value;
+            const resultDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const answerText = document.getElementById('answer-text');
+            const modelUsed = document.getElementById('model-used');
+            
+            const modelDisplayNames = {
+                'llama': 'Llama 3',
+                'gemini': 'Gemini',
+                'mistral': 'Mistral',
+                'deepseek': 'DeepSeek'
+            };
+            modelUsed.textContent = modelDisplayNames[model] || model;
+            
+            if (!websiteUrl || !question) {
+                alert('Please enter both a website URL and a question');
+                return;
+            }
+            
+            loader.style.display = 'block';
+            resultDiv.style.display = 'none';
+            answerText.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/chat-with-website', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        website_url: websiteUrl,
+                        question: question,
+                        model: model
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                loader.style.display = 'none';
+                
+                if (response.ok) {
+                    answerText.textContent = data.answer;
+                    resultDiv.style.display = 'block';
+                    
+                    // Save the last successful query to localStorage
+                    localStorage.setItem('lastWebsiteUrl', websiteUrl);
+                    localStorage.setItem('lastQuestion', question);
+                    localStorage.setItem('lastModel', model);
+                } else {
+                    answerText.innerHTML = `<div class="alert alert-danger">
+                        <strong>Error:</strong> ${data.error || 'Failed to get answer'}
+                    </div>`;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                loader.style.display = 'none';
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+        document.getElementById('question').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                document.getElementById('submit-btn').click();
+            }
+        });
+
+        function useSampleWebsite() {
+            document.getElementById('website-url').value = 'https://www.python.org';
+            document.getElementById('question').value = 'What is Python used for?';
+        }
+    </script>
+</body>
+</html>
