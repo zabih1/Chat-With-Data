@@ -39,8 +39,10 @@ def youtube_summary_api():
         video_id = extract_video_id(youtube_url)
         summary = generate_summary(youtube_url, model)
         
+        processed_summary = process_markdown(summary)
+        
         return jsonify({
-            'summary': summary,
+            'summary': processed_summary,
             'video_id': video_id,
             'model': model
         })
@@ -78,12 +80,13 @@ def chat_with_website_api():
         
         rag_chain = create_rag_chain(chunks, model_name)
         
-        answer = rag_chain.invoke(question)
+        raw_answer = rag_chain.invoke(question)
+        
         
         return jsonify({
             'website_url': website_url,
             'question': question,
-            'answer': answer,
+            'answer': markdown.markdown(raw_answer),
             'model_used': get_model_display_name(model_name)
         })
     
@@ -91,7 +94,10 @@ def chat_with_website_api():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
-    
+
+
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

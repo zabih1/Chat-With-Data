@@ -179,8 +179,7 @@
                     
                     originalText = data.summary;
                     
-                    let processedText = processMarkdown(originalText);
-                    summaryText.innerHTML = marked.parse(processedText);
+                    summaryText.innerHTML = marked.parse(originalText);
                     
                     resultDiv.style.display = 'block';
                 } else {
@@ -191,14 +190,6 @@
                 alert(`Error: ${error.message}`);
             }
         });
-        
-        function processMarkdown(text) {
-            let processed = text.replace(/•\s/g, '* ');
-            processed = processed.replace(/([^\n])(#+ )/g, '$1\n\n$2');
-            processed = processed.replace(/\*\* ([^:]+):\*\*\n([*-])/g, '**$1:**\n\n$2');
-            processed = processed.replace(/\*\*([^:]+):\*\*\n(?!\n)/g, '**$1:**\n\n');
-            return processed;
-        }
         
         document.getElementById('youtube-url').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {

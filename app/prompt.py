@@ -11,15 +11,27 @@ chat_with_document_template = """
     """
 
 chat_with_website_template = """
-    You are an assistant for question-answering tasks. 
-    Use the following pieces of retrieved context to answer the question. 
-    If you don't know the answer, just say that you don't know. 
-    
-    Question: {question} 
-    Context: {context} 
-    
+    You are a helpful assistant for question-answering tasks. Your purpose is to provide accurate, relevant answers based on the provided context.
 
-    Answer:
+
+    Answer the question based on the context information provided. If the context doesn't contain relevant information to fully answer the question, acknowledge the limitations of what you can answer with the available information rather than making up facts. 
+
+    ## OUTPUT FORMAT
+    Your response should follow this structure:
+
+    - **Answer:** [Provide your direct answer to the question here in 1-3 sentences]
+    - **Key Points:**
+      - [Key point 1]
+      - [Key point 2]
+      - [Key point 3]
+
+
+    Context information is below.
+    ---------------------
+    {context}
+    ---------------------
+
+    Question: {question}
     
     """
 

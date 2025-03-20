@@ -19,7 +19,7 @@ from app.llm import deepseek_r1_model ,llama_model, gemini_model, mistral_model
 
 
 
-def scrape_website_content(website_url, timeout=30):
+def scrape_website_content(website_url):
 
     if website_url.endswith('/'):
         website_url = website_url[:-1]
@@ -70,8 +70,7 @@ def scrape_website_content(website_url, timeout=30):
         return documents
     except Exception as e:
         print(f"All loading methods failed. Final error: {e}")
-        return []
-    
+        return []   
 
 def save_website_content(website_content, output_dir='data'):
 
@@ -97,7 +96,7 @@ def save_website_content(website_content, output_dir='data'):
     return file_path
 
 def load_website_content(file_path):
-
+    
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Website content file not found: {file_path}")
      
