@@ -7,11 +7,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import scrape_website_content, save_website_content, load_website_content, create_rag_chain
-from app.utils import process_markdown, MODELS, get_model_display_name
+from app.utils import process_markdown, MODELS, get_model_display_name, split_content
 
 app = Flask(__name__, template_folder='templates')
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
     if request.method == 'GET':
         return render_template('index.html', models=MODELS)
@@ -59,25 +59,39 @@ def chat_with_website_api():
         
         website_url = data['website_url']
         question = data['question']
+        model_name = data.get('model', 'deepseek')  
         
-        # Check if we have this website cached or need to load it
-        # For simplicity, we'll just load it every time in this implementation
-        documents = load_website_content(website_url)
+        website_dir = 'data'
+        os.makedirs(website_dir, exist_ok=True)
+        file_path = os.path.join(website_dir, f"{website_url.replace('://', '_').replace('/', '_')}.txt")
         
-        # Create RAG chain
-        rag_chain = create_rag_chain(documents)
+        if not os.path.exists(file_path):
+            documents = scrape_website_content(website_url)
+            if not documents:
+                return jsonify({'error': 'Failed to scrape website content'}), 500
+            
+            file_path = save_website_content(documents, website_dir)
         
-        # Get answer
+        documents = load_website_content(file_path)
+        
+        chunks = split_content(documents)
+        
+        rag_chain = create_rag_chain(chunks, model_name)
+        
         answer = rag_chain.invoke(question)
         
         return jsonify({
             'website_url': website_url,
             'question': question,
-            'answer': answer
+            'answer': answer,
+            'model_used': get_model_display_name(model_name)
         })
     
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

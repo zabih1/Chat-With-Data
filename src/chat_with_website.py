@@ -7,7 +7,7 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader , TextLoader
 from bs4 import BeautifulSoup
-
+import time
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -74,20 +74,33 @@ def scrape_website_content(website_url, timeout=30):
     
 
 def save_website_content(website_content, output_dir='data'):
+
     os.makedirs(output_dir, exist_ok=True)
     
     text = []
     for i in website_content:
         clean_content = ' '.join(i.page_content.split())
         text.append(clean_content)
-
-    file_path = os.path.join(output_dir, "website_content.txt")
+    
+    if website_content and hasattr(website_content[0], 'metadata') and 'source' in website_content[0].metadata:
+        url = website_content[0].metadata['source']
+        filename = url.replace('://', '_').replace('/', '_')
+        filename = filename[:150] + '.txt'  # Limit length
+    else:
+        filename = f"website_content_{int(time.time())}.txt"
+    
+    file_path = os.path.join(output_dir, filename)
+    
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write('\n\n'.join(text))
 
     return file_path
 
 def load_website_content(file_path):
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Website content file not found: {file_path}")
+     
     loader = TextLoader(file_path)
     documents = loader.load()
 

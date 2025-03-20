@@ -94,25 +94,6 @@
     </div>
 
     <script>
-        // Load saved values if they exist
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedUrl = localStorage.getItem('lastWebsiteUrl');
-            const savedQuestion = localStorage.getItem('lastQuestion');
-            const savedModel = localStorage.getItem('lastModel');
-            
-            if (savedUrl) {
-                document.getElementById('website-url').value = savedUrl;
-            }
-            
-            if (savedQuestion) {
-                document.getElementById('question').value = savedQuestion;
-            }
-            
-            if (savedModel) {
-                document.getElementById('model-select').value = savedModel;
-            }
-        });
-        
         document.getElementById('submit-btn').addEventListener('click', async () => {
             const websiteUrl = document.getElementById('website-url').value.trim();
             const question = document.getElementById('question').value.trim();
@@ -121,14 +102,6 @@
             const loader = document.getElementById('loader');
             const answerText = document.getElementById('answer-text');
             const modelUsed = document.getElementById('model-used');
-            
-            const modelDisplayNames = {
-                'llama': 'Llama 3',
-                'gemini': 'Gemini',
-                'mistral': 'Mistral',
-                'deepseek': 'DeepSeek'
-            };
-            modelUsed.textContent = modelDisplayNames[model] || model;
             
             if (!websiteUrl || !question) {
                 alert('Please enter both a website URL and a question');
@@ -158,6 +131,7 @@
                 
                 if (response.ok) {
                     answerText.textContent = data.answer;
+                    modelUsed.textContent = data.model_used || model;
                     resultDiv.style.display = 'block';
                     
                     // Save the last successful query to localStorage
@@ -172,20 +146,12 @@
                 }
             } catch (error) {
                 loader.style.display = 'none';
-                alert(`Error: ${error.message}`);
+                answerText.innerHTML = `<div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>`;
+                resultDiv.style.display = 'block';
             }
         });
-        
-        document.getElementById('question').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                document.getElementById('submit-btn').click();
-            }
-        });
-
-        function useSampleWebsite() {
-            document.getElementById('website-url').value = 'https://www.python.org';
-            document.getElementById('question').value = 'What is Python used for?';
-        }
     </script>
 </body>
 </html>
