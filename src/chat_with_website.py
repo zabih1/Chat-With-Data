@@ -49,13 +49,3 @@ def create_rag_chain(docs):
     
     return rag_chain
 
-
-website_content = load_website_content("https://www.devsinc.com/")
-
-docs = split_content(website_content)
-
-chain = create_rag_chain(docs)
-
-result = chain.invoke("who is asif usman?")
-
-print(result)

@@ -41,15 +41,14 @@ Provide a concise, informative summary of the YouTube video transcript below.
 {full_transcript}
 
 ## Output Format
-- Title: [Inferred title based on content]
-- Main Topic: [1-2 sentence description of what the video is about]
-- Key Points:
+- **Title:** [Inferred title based on content]
+- **Main Topic:** [1-2 sentence description of what the video is about]
+- **Key Points:**
   • [Point 1]
   • [Point 2]
   • [Point 3]
   • [Additional points as needed]
-- Conclusion: [Main takeaway or call to action]
-
+- **Conclusion:** [Main takeaway or call to action]
 
 """
 
