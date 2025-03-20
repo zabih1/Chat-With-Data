@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Data Intelligence Hub</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        .workspace-height {
+            height: calc(100vh - 56px);
+        }
+        .chat-area {
+            height: 60vh;
+            overflow-y: auto;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            border-radius: 12px 12px 0 12px;
+        }
+        .bot-message {
+            background-color: #f1f1f1;
+            border-radius: 12px 12px 12px 0;
+        }
+        .upload-zone {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .sql-code {
+            background-color: #282c34;
+            color: #e6e6e6;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <i class="fas fa-brain text-primary"></i>
+                <span>AI Data Intelligence Hub</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-cog"></i> Settings</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-user"></i> Profile</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid workspace-height">
+        <div class="row h-100">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-light border-end py-3">
+                <h5 class="mb-3 px-3">Workspace</h5>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action active" data-bs-toggle="list"
+                        data-bs-target="#dashboardTab">
+                        <i class="fas fa-home me-2"></i> Dashboard
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="list"
+                        data-bs-target="#databaseTab">
+                        <i class="fas fa-database me-2"></i> Databases
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="list"
+                        data-bs-target="#websiteTab">
+                        <i class="fas fa-globe me-2"></i> Website Chat
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="list"
+                        data-bs-target="#youtubeTab">
+                        <i class="fab fa-youtube me-2"></i> YouTube Summarizer
+                    </a>
+                </div>
+
+                <h5 class="mb-3 mt-4 px-3">Recent Data</h5>
+                <div class="list-group list-group-flush">
+                    <p class="text-muted small px-3">No recent files</p>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="col-md-10 py-3">
+                <div class="tab-content h-100">
+                    <!-- Dashboard Tab -->
+                    <div class="tab-pane fade show active h-100" id="dashboardTab">
+                        <div class="container h-100">
+                            <h3 class="mb-4">Welcome to AI Data Intelligence Hub</h3>
+
+                            <!-- Data Sources Cards -->
+                            <h4 class="mb-3">Select a Data Source</h4>
+                            <div class="row mb-4 g-3">
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm h-100" data-bs-toggle="list" data-bs-target="#databaseTab">
+                                        <div class="card-body text-center py-4">
+                                            <i class="fas fa-database fa-3x text-success mb-3"></i>
+                                            <h5>Database Query</h5>
+                                            <p class="text-muted">Query databases using natural language</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm h-100" data-bs-toggle="list"
+                                        data-bs-target="#websiteTab">
+                                        <div class="card-body text-center py-4">
+                                            <i class="fas fa-globe fa-3x text-info mb-3"></i>
+                                            <h5>Website Chat</h5>
+                                            <p class="text-muted">Chat with any website content</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm h-100" data-bs-toggle="list"
+                                        data-bs-target="#youtubeTab">
+                                        <div class="card-body text-center py-4">
+                                            <i class="fab fa-youtube fa-3x text-danger mb-3"></i>
+                                            <h5>YouTube Summarizer</h5>
+                                            <p class="text-muted">Get summaries of YouTube videos</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Activity -->
+                            <h4 class="mb-3">Recent Activity</h4>
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item">
+                                            <p class="text-muted mb-0">No recent activity</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Tab -->
+                    <div class="tab-pane fade h-100" id="databaseTab">
+                        <div class="container h-100">
+                            <div class="row h-100">
+                                <!-- Database Sidebar -->
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="card-title mb-0">Database Information</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label for="dbConnection" class="form-label">Connection</label>
+                                                <select class="form-select" id="dbConnection">
+                                                    <option selected>Select database</option>
+                                                    <option value="default_db" selected>Movie Database</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <h6 class="border-bottom pb-2">Available Tables</h6>
+                                                <div class="list-group table-list">
+                                                    <p class="text-muted small">Tables will load when connected</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Database Main Content -->
+                                <div class="col-md-9">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="card-title mb-0">Database Query</h5>
+                                        </div>
+                                        <div class="card-body p-0 d-flex flex-column">
+                                            <div class="d-flex justify-content-between p-3 border-bottom">
+                                                <div>
+                                                    <h6 class="mb-0" id="currentDatabase">Movie Database</h6>
+                                                </div>
+                                                <div>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-sync"></i> Refresh
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-file-export"></i> Export
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="p-3">
+                                                <form id="dbQueryForm" class="d-flex gap-2">
+                                                    <input type="text" id="dbQueryInput" name="question" class="form-control"
+                                                        placeholder="Enter your query in natural language..." />
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fas fa-search"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div id="queryResults" class="p-3 flex-grow-1">
+                                                <div class="text-center my-5 text-muted">
+                                                    <i class="fas fa-database fa-3x mb-3"></i>
+                                                    <p>Enter a query to view results</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Website Chat Tab -->
+                    <div class="tab-pane fade h-100" id="websiteTab">
+                        <div class="container h-100">
+                            <div class="row h-100">
+                                <!-- Website URL Section -->
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="card-title mb-0">Chat with Website</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-4">
+                                                <label for="webAiModel" class="form-label">AI Model</label>
+                                                <select class="form-select" id="webAiModel">
+                                                    <option value="gpt4">GPT-4</option>
+                                                    <option value="deepseek" selected>DeepSeek</option>
+                                                    <option value="claude">Anthropic Claude</option>
+                                                    <option value="mistral">Mistral AI</option>
+                                                </select>
+                                            </div>
+                                            <form id="websiteUrlForm" class="mb-4">
+                                                <label for="websiteUrl" class="form-label">Website URL</label>
+                                                <div class="input-group mb-3">
+                                                    <input type="url" class="form-control" id="websiteUrl" 
+                                                        placeholder="https://example.com" required>
+                                                    <button class="btn btn-info" type="submit" id="websiteSubmitBtn">
+                                                        <i class="fas fa-arrow-right"></i>
+                                                    </button>
+                                                </div>
+                                                <div id="websiteStatus" class="small text-muted mt-2"></div>
+                                            </form>
+                                            
+                                            <div class="mt-4">
+                                                <h6 class="border-bottom pb-2">Recent Websites</h6>
+                                                <div class="list-group recent-websites">
+                                                    <p class="text-muted small">No recent websites</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Website Chat Section -->
+                                <div class="col-md-9">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="card-title mb-0">Website Content Chat</h5>
+                                        </div>
+                                        <div class="card-body p-0 d-flex flex-column">
+                                            <div class="d-flex justify-content-between p-3 border-bottom">
+                                                <div>
+                                                    <h6 class="mb-0" id="currentWebsite">No website selected</h6>
+                                                </div>
+                                            </div>
+                                            <div id="webChatContainer" class="chat-area p-3 flex-grow-1 bg-light">
+                                                <div class="text-center my-5 text-muted" id="webInitialMessage">
+                                                    <i class="fas fa-globe fa-3x mb-3"></i>
+                                                    <p>Enter a website URL to start chatting about its content</p>
+                                                </div>
+                                            </div>
+                                            <div class="border-top p-3">
+                                                <form id="webChatForm" class="d-flex gap-2">
+                                                    <input type="text" id="webMessageInput" class="form-control"
+                                                        placeholder="Ask a question about this website..." disabled />
+                                                    <button type="submit" class="btn btn-info" disabled>
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YouTube Summarizer Tab -->
+                    <div class="tab-pane fade h-100" id="youtubeTab">
+                        <div class="container h-100">
+                            <div class="row h-100">
+                                <!-- YouTube URL Section -->
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-danger text-white">
+                                            <h5 class="card-title mb-0">YouTube Summarizer</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-4">
+                                                <label for="ytAiModel" class="form-label">AI Model</label>
+                                                <select class="form-select" id="ytAiModel">
+                                                    <option value="gpt4">GPT-4</option>
+                                                    <option value="llama" selected>Meta LLaMA</option>
+                                                    <option value="claude">Anthropic Claude</option>
+                                                    <option value="mistral">Mistral AI</option>
+                                                </select>
+                                            </div>
+                                            <form id="youtubeUrlForm" class="mb-4">
+                                                <label for="youtubeUrl" class="form-label">YouTube URL</label>
+                                                <div class="input-group mb-3">
+                                                    <input type="url" class="form-control" id="youtubeUrl" 
+                                                        placeholder="https://youtube.com/watch?v=..." required>
+                                                    <button class="btn btn-danger" type="submit" id="youtubeSubmitBtn">
+                                                        <i class="fas fa-arrow-right"></i>
+                                                    </button>
+                                                </div>
+                                                <div id="youtubeStatus" class="small text-muted mt-2"></div>
+                                            </form>
+                                            
+                                            <div class="mb-3">
+                                                <label for="summaryLength" class="form-label">Summary Length</label>
+                                                <select class="form-select" id="summaryLength">
+                                                    <option value="short">Short</option>
+                                                    <option value="medium" selected>Medium</option>
+                                                    <option value="detailed">Detailed</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="mt-4">
+                                                <h6 class="border-bottom pb-2">Recent Videos</h6>
+                                                <div class="list-group recent-videos">
+                                                    <p class="text-muted small">No recent videos</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Video Summary Section -->
+                                <div class="col-md-9">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-danger text-white">
+                                            <h5 class="card-title mb-0">Video Summary</h5>
+                                        </div>
+                                        <div class="card-body p-0 d-flex flex-column">
+                                            <div id="videoInfoContainer" class="p-3 border-bottom d-none">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-4" id="videoThumbnail">
+                                                        <!-- Thumbnail will be inserted here -->
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <h5 id="videoTitle">Video Title</h5>
+                                                        <p class="text-muted mb-1" id="videoChannel">Channel Name</p>
+                                                        <p class="small text-muted mb-0" id="videoDuration">Duration: 00:00</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="videoSummaryContainer" class="p-3 flex-grow-1 overflow-auto">
+                                                <div class="text-center my-5 text-muted" id="ytInitialMessage">
+                                                    <i class="fab fa-youtube fa-3x mb-3 text-danger"></i>
+                                                    <p>Enter a YouTube URL to generate a summary</p>
+                                                </div>
+                                            </div>
+                                            <div class="border-top p-3">
+                                                <form id="summaryActionsForm" class="d-flex gap-2 d-none">
+                                                    <button type="button" class="btn btn-outline-secondary flex-grow-1" id="copyBtn">
+                                                        <i class="fas fa-copy me-1"></i> Copy Summary
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary flex-grow-1" id="downloadBtn">
+                                                        <i class="fas fa-download me-1"></i> Download
+                                                    </button>
+                                                    <button type="button" class="btn btn-danger flex-grow-1" id="regenerateBtn">
+                                                        <i class="fas fa-sync-alt me-1"></i> Regenerate
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        // YouTube URL Form Handling
+        document.getElementById('youtubeUrlForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const urlInput = document.getElementById('youtubeUrl');
+            const url = urlInput.value.trim();
+            const model = document.getElementById('ytAiModel').value;
+            
+            if (!url) return;
+            
+            // Validate YouTube URL
+            if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
+                document.getElementById('youtubeStatus').textContent = 'Please enter a valid YouTube URL';
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('youtubeSubmitBtn');
+            const originalBtnHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            submitBtn.disabled = true;
+            document.getElementById('youtubeStatus').textContent = 'Processing video...';
+            
+            // Prepare the request to your API
+            fetch('/api/youtube-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    youtube_url: url,
+                    model: model
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                submitBtn.innerHTML = originalBtnHTML;
+                submitBtn.disabled = false;
+                document.getElementById('youtubeStatus').textContent = 'Video processed successfully';
+                
+                // Extract video ID for thumbnail
+                const videoId = data.video_id;
+                
+                // Display video info
+                document.getElementById('videoInfoContainer').classList.remove('d-none');
+                document.getElementById('videoTitle').textContent = "YouTube Video";
+                document.getElementById('videoChannel').textContent = "Channel";
+                document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+                document.getElementById('videoThumbnail').innerHTML = `
+                    <img src="https://img.youtube.com/vi/${videoId}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
+                `;
+                
+                // Display summary
+                document.getElementById('ytInitialMessage').classList.add('d-none');
+                document.getElementById('videoSummaryContainer').innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+                
+                // Show actions
+                document.getElementById('summaryActionsForm').classList.remove('d-none');
+            })
+            .catch(error => {
+                submitBtn.innerHTML = originalBtnHTML;
+                submitBtn.disabled = false;
+                document.getElementById('youtubeStatus').textContent = 'Error: ' + error.message;
+            });
+        });
+
+        // Website URL Form Handling
+        document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const urlInput = document.getElementById('websiteUrl');
+            const url = urlInput.value.trim();
+            const model = document.getElementById('webAiModel').value;
+            
+            if (!url) return;
+            
+            // Validate URL
+            try {
+                new URL(url);
+            } catch (_) {
+                document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('websiteSubmitBtn');
+            const originalBtnHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            submitBtn.disabled = true;
+            document.getElementById('websiteStatus').textContent = 'Loading website content...';
+            
+            // Store the website URL for later use in chat
+            document.getElementById('currentWebsite').textContent = url;
+            document.getElementById('websiteStatus').textContent = 'Website content loaded';
+            
+            // Enable chat interface after successful website processing
+            document.getElementById('webMessageInput').disabled = false;
+            document.getElementById('webChatForm').querySelector('button').disabled = false;
+            
+            // Reset UI state
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
+            
+            // Clear the initial message
+            document.getElementById('webInitialMessage').classList.add('d-none');
+            
+            // Add welcome message
+            const chatContainer = document.getElementById('webChatContainer');
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
+            botMessageDiv.innerHTML = `
+                <p class="mb-0">Website content processed. What would you like to know about it?</p>
+            `;
+            chatContainer.appendChild(botMessageDiv);
+        });
+
+        // Website Chat Form Handling
+        document.getElementById('webChatForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const messageInput = document.getElementById('webMessageInput');
+            const message = messageInput.value.trim();
+            const website = document.getElementById('currentWebsite').textContent;
+            const model = document.getElementById('webAiModel').value;
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            const chatContainer = document.getElementById('webChatContainer');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'user-message p-3 mb-3 ms-auto w-75';
+            userMessageDiv.textContent = message;
+            chatContainer.appendChild(userMessageDiv);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'bot-message p-3 mb-3 w-75';
+            loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
+            chatContainer.appendChild(loadingDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Send request to your API
+            fetch('/api/chat-with-website', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    website_url: website,
+                    question: message,
+                    model: model
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Remove loading indicator
+                chatContainer.removeChild(loadingDiv);
+                
+                // Add bot response
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
+                botMessageDiv.innerHTML = data.answer;
+                chatContainer.appendChild(botMessageDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            })
+            .catch(error => {
+                // Remove loading indicator
+                chatContainer.removeChild(loadingDiv);
+                
+                // Add error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bot-message p-3 mb-3 w-75 text-danger';
+                errorDiv.textContent = 'Error: ' + error.message;
+                chatContainer.appendChild(errorDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+        });
+
+        // Database Query Form Handling
+        document.getElementById('dbQueryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const questionInput = document.getElementById('dbQueryInput');
+            const question = questionInput.value.trim();
+            
+            if (!question) return;
+            
+            // Show loading state
+            const queryResults = document.getElementById('queryResults');
+            queryResults.innerHTML = `
+                <div class="text-center my-5">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <p class="mt-3">Processing your query...</p>
+                </div>
+            `;
+            
+            // Send request to your API
+            fetch('/api/text_to_sql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'question': question
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Display the results
+                queryResults.innerHTML = `
+                    <div class="mb-3">
+                        <h6>SQL Query:</h6>
+                        <pre class="sql-code p-3">${data.query}</pre>
+                    </div>
+                    <div>
+                        <h6>Answer:</h6>
+                        <div class="p-3 bg-light rounded">
+                            ${data.answer}
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                queryResults.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            });
+        });
+
+        // Summary Copy Button
+        document.getElementById('copyBtn')?.addEventListener('click', function() {
+            const summaryText = document.querySelector('#videoSummaryContainer .card-body').textContent;
+            navigator.clipboard.writeText(summaryText)
+                .then(() => {
+                    this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+        });
+
+        // Download Summary Button
+        document.getElementById('downloadBtn')?.addEventListener('click', function() {
+            const videoTitle = document.getElementById('videoTitle').textContent;
+            const summaryText = document.querySelector('#videoSummaryContainer .card-body').textContent;
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(summaryText));
+            element.setAttribute('download', `${videoTitle} - Summary.txt`);
+            element.style.display = 'none';
+            
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        });
+
+        // Regenerate Summary Button
+        document.getElementById('regenerateBtn')?.addEventListener('click', function() {
+            const url = document.getElementById('youtubeUrl').value;
+            const model = document.getElementById('ytAiModel').value;
+            
+            document.getElementById('videoSummaryContainer').innerHTML = `
+                <div class="text-center my-5">
+                    <div class="spinner-border text-danger" role="status"></div>
+                    <p class="mt-3">Regenerating summary...</p>
+                </div>
+            `;
+            
+            // Call your API again with the same parameters
+            fetch('/api/youtube-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    youtube_url: url,
+                    model: model
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('videoSummaryContainer').innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                document.getElementById('videoSummaryContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+
+</html>

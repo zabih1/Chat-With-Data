@@ -5,9 +5,9 @@ import os
 import re
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.prompt import youtube_video_summary_template
 from app.llm import llama_model, gemini_model, mistral_model, deepseek_r1_model
-
 
 def get_video_transcript(video_id):
 

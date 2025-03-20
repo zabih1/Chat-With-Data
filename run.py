@@ -7,7 +7,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import scrape_website_content, save_website_content, load_website_content, create_rag_chain
+from src.text_to_sql import State, write_query, execute_query, generate_answer
+
 from app.utils import process_markdown, MODELS, get_model_display_name, split_content
+
 
 app = Flask(__name__, template_folder='templates')
 
@@ -16,11 +19,9 @@ def index():
     if request.method == 'GET':
         return render_template('index.html', models=MODELS)
 
-
 @app.route('/chat-with-website', methods=['GET'])
 def chat_with_website_page():
     return render_template('chat_with_website.html')
-
 
 @app.route('/api/youtube-summary', methods=['POST'])
 def youtube_summary_api():
@@ -49,7 +50,6 @@ def youtube_summary_api():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/chat-with-website', methods=['POST'])
 def chat_with_website_api():
@@ -95,8 +95,29 @@ def chat_with_website_api():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/text_to_sql", methods=["POST"])
+def text_to_sql_api():
+    state: State = {"question": "", "query": "", "result": "", "answer": ""}
 
+    if request.method == "POST":
+        state["question"] = request.form.get("question", "").strip()
+        if state["question"]:
+            try:
+                query_dict = write_query(state)
+                state["query"] = query_dict.get("query", "")
 
+                result_dict = execute_query(state)
+                state["result"] = result_dict.get("result", "")
+
+                answer_dict = generate_answer(state)
+                state["answer"] = answer_dict.get("answer", "")
+
+                return jsonify(state)
+            
+            except Exception as e:
+                return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+    return jsonify(state)
 
 
 if __name__ == '__main__':

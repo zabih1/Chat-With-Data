@@ -11,5 +11,6 @@ weaviate_api_key = os.getenv("WEAVIATE_API_KEY")
 weaviate_url = os.getenv("WEAVIATE_URL")
 
 
+db_uri = os.getenv("DATABASE_URI")
 
 
