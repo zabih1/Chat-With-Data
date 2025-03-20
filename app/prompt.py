@@ -49,6 +49,8 @@ Provide a concise, informative summary of the YouTube video transcript below.
   • [Point 3]
   • [Additional points as needed]
 - Conclusion: [Main takeaway or call to action]
+
+
 """
 
 

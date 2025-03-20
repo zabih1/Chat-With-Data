@@ -1,0 +1,7 @@
+flask
+markdown
+python-dotenv
+langchain
+langchain-google-genai
+langchain-groq
+youtube-transcript-api
