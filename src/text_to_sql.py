@@ -28,10 +28,14 @@ class State(TypedDict):
 
 def write_query(state: State) -> dict:
     try:
+        # Check if db_uri exists in state and is not None
+        if "db_uri" not in state or not state["db_uri"]:
+            return {"query": "-- Error: Database URI is missing or empty"}
+        
         db = SQLDatabase.from_uri(state["db_uri"])
         
         if not db:
-            return {"query": "ERROR: Database not available"}
+            return {"query": "-- Error: Database not available"}
         
         prompt = query_prompt_template.invoke({
             "dialect": db.dialect,
@@ -42,7 +46,8 @@ def write_query(state: State) -> dict:
 
         response = llm1.invoke(prompt)
         
-        sql_query = response.content
+        # Extract SQL query from response
+        sql_query = response.content if hasattr(response, "content") else str(response)
         
         if "```sql" in sql_query:
             sql_match = re.search(r"```sql\n(.*?)\n```", sql_query, re.DOTALL)
@@ -60,10 +65,14 @@ def write_query(state: State) -> dict:
 
 def execute_query(state: State) -> dict:
     try:
+        # Check if db_uri exists in state and is not None
+        if "db_uri" not in state or not state["db_uri"]:
+            return {"result": "Error: Database URI is missing or empty"}
+        
         db = SQLDatabase.from_uri(state["db_uri"])
         
         if not db:
-            return {"result": "ERROR: Database not available"}
+            return {"result": "Error: Database not available"}
         
         execute_query_tool = QuerySQLDatabaseTool(db=db)
         result = execute_query_tool.invoke(state["query"])
@@ -88,10 +97,9 @@ def generate_answer(state: State) -> dict:
         )
 
         response = llm1.invoke(prompt)
-        html_content = markdown.markdown(response.content)
+        response_content = response.content if hasattr(response, "content") else str(response)
+        html_content = markdown.markdown(response_content)
         return {"answer": html_content}
     
     except Exception as e:
         return {"answer": f"<p>Error generating answer: {str(e)}</p>"}
-
-

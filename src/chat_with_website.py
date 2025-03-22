@@ -12,11 +12,9 @@ import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.utils import split_content, setup_vector_database
+from app.utils import setup_vector_database
 from app.prompt import chat_with_website_template
 from app.llm import deepseek_r1_model ,llama_model, gemini_model, mistral_model
-
-
 
 
 def scrape_website_content(website_url):
@@ -130,17 +128,3 @@ def create_rag_chain(docs, model_name='llama'):
     )
     
     return rag_chain
-
-
-
-# website_content = scrape_website_content("https://zabihullah.pythonanywhere.com/")
-
-
-# file_path = save_website_content(website_content)
-
-# document = load_website_content(file_path)
-
-# docs = split_content(document)
-# chain = create_rag_chain(docs)
-# result = chain.invoke("who is zabih")
-# print(result)

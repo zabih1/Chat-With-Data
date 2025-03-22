@@ -8,20 +8,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import scrape_website_content, save_website_content, load_website_content, create_rag_chain
 from src.text_to_sql import State, write_query, execute_query, generate_answer
-
 from app.utils import process_markdown, MODELS, get_model_display_name, split_content
-
+from config import db_uri
 
 app = Flask(__name__, template_folder='templates')
 
 @app.route('/', methods=['GET'])
 def index():
-    if request.method == 'GET':
-        return render_template('index.html', models=MODELS)
-
-@app.route('/chat-with-website', methods=['GET'])
-def chat_with_website_page():
-    return render_template('chat_with_website.html')
+    return render_template('index1.html', models=MODELS)
 
 @app.route('/api/youtube-summary', methods=['POST'])
 def youtube_summary_api():
@@ -75,13 +69,9 @@ def chat_with_website_api():
             file_path = save_website_content(documents, website_dir)
         
         documents = load_website_content(file_path)
-        
         chunks = split_content(documents)
-        
         rag_chain = create_rag_chain(chunks, model_name)
-        
         raw_answer = rag_chain.invoke(question)
-        
         
         return jsonify({
             'website_url': website_url,
@@ -97,7 +87,7 @@ def chat_with_website_api():
 
 @app.route("/api/text_to_sql", methods=["POST"])
 def text_to_sql_api():
-    state: State = {"question": "", "query": "", "result": "", "answer": ""}
+    state = {"question": "", "query": "", "result": "", "answer": "", "db_uri": db_uri}
 
     if request.method == "POST":
         state["question"] = request.form.get("question", "").strip()
