@@ -433,6 +433,172 @@
             const recentWebsites = [];
             const recentVideos = [];
             
+            // Website URL Form Handling - NEW UPDATED CODE
+            document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const urlInput = document.getElementById('websiteUrl');
+                const url = urlInput.value.trim();
+                
+                if (!url) return;
+                
+                // Validate URL
+                try {
+                    new URL(url);
+                } catch (_) {
+                    document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
+                    return;
+                }
+                
+                // Show loading state
+                const submitBtn = document.getElementById('websiteSubmitBtn');
+                const originalBtnHTML = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                submitBtn.disabled = true;
+                document.getElementById('websiteStatus').textContent = 'Loading and indexing website content...';
+                
+                // Call the prepare-website API to scrape and index the website
+                fetch('/api/prepare-website', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        website_url: url
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Reset submit button
+                    submitBtn.innerHTML = originalBtnHTML;
+                    submitBtn.disabled = false;
+                    
+                    if (data.success) {
+                        document.getElementById('websiteStatus').textContent = 'Website content loaded and indexed successfully!';
+                        
+                        // Add to recent websites if not already there
+                        if (!recentWebsites.includes(url)) {
+                            recentWebsites.unshift(url);
+                            if (recentWebsites.length > 5) recentWebsites.pop(); // Keep only 5 recent items
+                            
+                            // Update recent websites list
+                            updateRecentList('recent-websites', recentWebsites, (url) => {
+                                document.getElementById('websiteUrl').value = url;
+                                document.getElementById('websiteUrlForm').dispatchEvent(new Event('submit'));
+                            });
+                        }
+                        
+                        // Store the website URL
+                        document.getElementById('currentWebsite').textContent = url;
+                        
+                        // Enable chat interface
+                        document.getElementById('webMessageInput').disabled = false;
+                        document.getElementById('webChatForm').querySelector('button').disabled = false;
+                        
+                        // Clear the initial message
+                        document.getElementById('webInitialMessage').classList.add('d-none');
+                        
+                        // Add welcome message
+                        const chatContainer = document.getElementById('webChatContainer');
+                        const botMessageDiv = document.createElement('div');
+                        botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
+                        botMessageDiv.innerHTML = `
+                            <p class="mb-0">Website content processed and indexed. What would you like to know about this website?</p>
+                        `;
+                        chatContainer.appendChild(botMessageDiv);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    } else {
+                        document.getElementById('websiteStatus').textContent = data.error || 'Unknown error';
+                    }
+                })
+                .catch(error => {
+                    submitBtn.innerHTML = originalBtnHTML;
+                    submitBtn.disabled = false;
+                    document.getElementById('websiteStatus').textContent = 'Error: ' + error.message;
+                });
+            });
+
+            // Website Chat Form Handling - NEW UPDATED CODE
+            document.getElementById('webChatForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const messageInput = document.getElementById('webMessageInput');
+                const message = messageInput.value.trim();
+                const website = document.getElementById('currentWebsite').textContent;
+                const model = document.getElementById('webAiModel').value;
+                
+                if (!message || website === 'No website selected') return;
+                
+                // Add user message to chat
+                const chatContainer = document.getElementById('webChatContainer');
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.className = 'user-message p-3 mb-3 ms-auto w-75';
+                userMessageDiv.textContent = message;
+                chatContainer.appendChild(userMessageDiv);
+                
+                // Clear input
+                messageInput.value = '';
+                
+                // Add loading indicator
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'bot-message p-3 mb-3 w-75';
+                loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
+                chatContainer.appendChild(loadingDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                // Send request to API
+                fetch('/api/chat-with-website', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        website_url: website,
+                        question: message,
+                        model: model
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remove loading indicator
+                    chatContainer.removeChild(loadingDiv);
+                    
+                    // Add bot response
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
+                    botMessageDiv.innerHTML = data.answer;
+                    chatContainer.appendChild(botMessageDiv);
+                    
+                    // Scroll to bottom
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(error => {
+                    // Remove loading indicator
+                    chatContainer.removeChild(loadingDiv);
+                    
+                    // Add error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bot-message p-3 mb-3 w-75 text-danger';
+                    errorDiv.textContent = 'Error: ' + error.message;
+                    chatContainer.appendChild(errorDiv);
+                    
+                    // Scroll to bottom
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+            });
+
             // YouTube URL Form Handling
             document.getElementById('youtubeUrlForm').addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -523,149 +689,6 @@
                     submitBtn.innerHTML = originalBtnHTML;
                     submitBtn.disabled = false;
                     document.getElementById('youtubeStatus').textContent = 'Error: ' + error.message;
-                });
-            });
-
-            // Website URL Form Handling
-            document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const urlInput = document.getElementById('websiteUrl');
-                const url = urlInput.value.trim();
-                const model = document.getElementById('webAiModel').value;
-                
-                if (!url) return;
-                
-                // Validate URL
-                try {
-                    new URL(url);
-                } catch (_) {
-                    document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
-                    return;
-                }
-                
-                // Show loading state
-                const submitBtn = document.getElementById('websiteSubmitBtn');
-                const originalBtnHTML = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                submitBtn.disabled = true;
-                document.getElementById('websiteStatus').textContent = 'Loading website content...';
-                
-                // Mock API call to process website content
-                // In a real implementation, you would validate the URL on the server side
-                // and process the website content before enabling chat
-                
-                // Add to recent websites if not already there
-                if (!recentWebsites.includes(url)) {
-                    recentWebsites.unshift(url);
-                    if (recentWebsites.length > 5) recentWebsites.pop(); // Keep only 5 recent items
-                    
-                    // Update recent websites list
-                    updateRecentList('recent-websites', recentWebsites, (url) => {
-                        document.getElementById('websiteUrl').value = url;
-                        document.getElementById('websiteUrlForm').dispatchEvent(new Event('submit'));
-                    });
-                }
-                
-                // Store the website URL for later use in chat
-                document.getElementById('currentWebsite').textContent = url;
-                document.getElementById('websiteStatus').textContent = 'Website content loaded';
-                
-                // Enable chat interface after successful website processing
-                document.getElementById('webMessageInput').disabled = false;
-                document.getElementById('webChatForm').querySelector('button').disabled = false;
-                
-                // Reset UI state
-                submitBtn.innerHTML = originalBtnHTML;
-                submitBtn.disabled = false;
-                
-                // Clear the initial message
-                document.getElementById('webInitialMessage').classList.add('d-none');
-                
-                // Add welcome message
-                const chatContainer = document.getElementById('webChatContainer');
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
-                botMessageDiv.innerHTML = `
-                    <p class="mb-0">Website content processed. What would you like to know about it?</p>
-                `;
-                chatContainer.appendChild(botMessageDiv);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            });
-
-            // Website Chat Form Handling
-            document.getElementById('webChatForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const messageInput = document.getElementById('webMessageInput');
-                const message = messageInput.value.trim();
-                const website = document.getElementById('currentWebsite').textContent;
-                const model = document.getElementById('webAiModel').value;
-                
-                if (!message || website === 'No website selected') return;
-                
-                // Add user message to chat
-                const chatContainer = document.getElementById('webChatContainer');
-                const userMessageDiv = document.createElement('div');
-                userMessageDiv.className = 'user-message p-3 mb-3 ms-auto w-75';
-                userMessageDiv.textContent = message;
-                chatContainer.appendChild(userMessageDiv);
-                
-                // Clear input
-                messageInput.value = '';
-                
-                // Add loading indicator
-                const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'bot-message p-3 mb-3 w-75';
-                loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
-                chatContainer.appendChild(loadingDiv);
-                
-                // Scroll to bottom
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-                
-                // Send request to API
-                fetch('/api/chat-with-website', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        website_url: website,
-                        question: message,
-                        model: model
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Remove loading indicator
-                    chatContainer.removeChild(loadingDiv);
-                    
-                    // Add bot response
-                    const botMessageDiv = document.createElement('div');
-                    botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
-                    botMessageDiv.innerHTML = data.answer;
-                    chatContainer.appendChild(botMessageDiv);
-                    
-                    // Scroll to bottom
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                })
-                .catch(error => {
-                    // Remove loading indicator
-                    chatContainer.removeChild(loadingDiv);
-                    
-                    // Add error message
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'bot-message p-3 mb-3 w-75 text-danger';
-                    errorDiv.textContent = 'Error: ' + error.message;
-                    chatContainer.appendChild(errorDiv);
-                    
-                    // Scroll to bottom
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
                 });
             });
 

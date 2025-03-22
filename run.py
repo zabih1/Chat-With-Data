@@ -2,16 +2,18 @@ from flask import Flask, request, jsonify, render_template
 import sys
 import os
 import markdown
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.youtube_video_summary import extract_video_id, generate_summary
-from src.chat_with_website import scrape_website_content, create_rag_chain
-from src.text_to_sql import State, write_query, execute_query, generate_answer
-from app.utils import process_markdown, MODELS, get_model_display_name, split_content
+from src.chat_with_website import prepare_website_data, chat_with_website
+from src.text_to_sql import write_query, execute_query, generate_answer
+from app.utils import process_markdown, MODELS, get_model_display_name
 from config import db_uri
 
 app = Flask(__name__, template_folder='templates')
+app.secret_key = os.urandom(24)  
 
 @app.route('/', methods=['GET'])
 def index():
@@ -45,6 +47,34 @@ def youtube_summary_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/prepare-website', methods=['POST'])
+def prepare_website_api():
+    try:
+        data = request.get_json()
+        
+        if not data or 'website_url' not in data:
+            return jsonify({'error': 'Missing required parameter: website_url'}), 400
+        
+        website_url = data['website_url']
+        
+        result = prepare_website_data(website_url)
+        
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Unknown error')}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': result['message'],
+            'website_url': website_url
+        })
+    
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/chat-with-website', methods=['POST'])
 def chat_with_website_api():
     try:
@@ -57,13 +87,7 @@ def chat_with_website_api():
         question = data['question']
         model_name = data.get('model', 'deepseek')
         
-        documents = scrape_website_content(website_url)
-        if not documents:
-            return jsonify({'error': 'Failed to scrape website content'}), 500
-        
-        chunks = split_content(documents)
-        rag_chain = create_rag_chain(chunks, model_name)
-        raw_answer = rag_chain.invoke(question)
+        raw_answer = chat_with_website(website_url, question, model_name)
         
         return jsonify({
             'website_url': website_url,
@@ -76,6 +100,7 @@ def chat_with_website_api():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
 
 @app.route("/api/text_to_sql", methods=["POST"])
 def text_to_sql_api():
@@ -100,7 +125,6 @@ def text_to_sql_api():
                 return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify(state)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
