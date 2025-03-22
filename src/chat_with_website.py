@@ -149,7 +149,7 @@ def load_vector_database():
     return vector_db
 
 
-def chat_with_website(question, model_name='deepseek'):
+def chat_with_website(website_url, question, model_name='deepseek'):
     try:
         vector_db = load_vector_database()
         
