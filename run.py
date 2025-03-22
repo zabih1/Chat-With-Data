@@ -6,7 +6,7 @@ import markdown
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.youtube_video_summary import extract_video_id, generate_summary
-from src.chat_with_website import scrape_website_content, save_website_content, load_website_content, create_rag_chain
+from src.chat_with_website import scrape_website_content, create_rag_chain
 from src.text_to_sql import State, write_query, execute_query, generate_answer
 from app.utils import process_markdown, MODELS, get_model_display_name, split_content
 from config import db_uri
@@ -55,20 +55,12 @@ def chat_with_website_api():
         
         website_url = data['website_url']
         question = data['question']
-        model_name = data.get('model', 'deepseek')  
+        model_name = data.get('model', 'deepseek')
         
-        website_dir = 'data'
-        os.makedirs(website_dir, exist_ok=True)
-        file_path = os.path.join(website_dir, f"{website_url.replace('://', '_').replace('/', '_')}.txt")
+        documents = scrape_website_content(website_url)
+        if not documents:
+            return jsonify({'error': 'Failed to scrape website content'}), 500
         
-        if not os.path.exists(file_path):
-            documents = scrape_website_content(website_url)
-            if not documents:
-                return jsonify({'error': 'Failed to scrape website content'}), 500
-            
-            file_path = save_website_content(documents, website_dir)
-        
-        documents = load_website_content(file_path)
         chunks = split_content(documents)
         rag_chain = create_rag_chain(chunks, model_name)
         raw_answer = rag_chain.invoke(question)

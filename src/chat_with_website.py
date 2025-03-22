@@ -5,20 +5,17 @@ import os, sys
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader , TextLoader
+from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader
 from bs4 import BeautifulSoup
-import time
-
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.utils import setup_vector_database
 from app.prompt import chat_with_website_template
-from app.llm import deepseek_r1_model ,llama_model, gemini_model, mistral_model
+from app.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
 
 
 def scrape_website_content(website_url):
-
     if website_url.endswith('/'):
         website_url = website_url[:-1]
         
@@ -47,7 +44,6 @@ def scrape_website_content(website_url):
         recursive_loader = RecursiveUrlLoader(
             url=website_url,
             extractor=html_extractor,
-      
         )
         documents = recursive_loader.load()
         print(f"Successfully loaded {len(documents)} pages recursively")
@@ -70,41 +66,7 @@ def scrape_website_content(website_url):
         print(f"All loading methods failed. Final error: {e}")
         return []   
 
-def save_website_content(website_content, output_dir='data'):
-
-    os.makedirs(output_dir, exist_ok=True)
-    
-    text = []
-    for i in website_content:
-        clean_content = ' '.join(i.page_content.split())
-        text.append(clean_content)
-    
-    if website_content and hasattr(website_content[0], 'metadata') and 'source' in website_content[0].metadata:
-        url = website_content[0].metadata['source']
-        filename = url.replace('://', '_').replace('/', '_')
-        filename = filename[:150] + '.txt'  # Limit length
-    else:
-        filename = f"website_content_{int(time.time())}.txt"
-    
-    file_path = os.path.join(output_dir, filename)
-    
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write('\n\n'.join(text))
-
-    return file_path
-
-def load_website_content(file_path):
-    
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Website content file not found: {file_path}")
-     
-    loader = TextLoader(file_path)
-    documents = loader.load()
-
-    return documents
-
 def create_rag_chain(docs, model_name='llama'):
-
     prompt = ChatPromptTemplate.from_template(chat_with_website_template)
 
     vector_db = setup_vector_database(docs)

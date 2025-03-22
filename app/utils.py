@@ -1,15 +1,13 @@
-import weaviate
-from weaviate.classes.init import Auth
 import sys
 import os
-from langchain_weaviate.vectorstores import WeaviateVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import gemini_api_key, weaviate_url, weaviate_api_key
-
+from config import gemini_api_key
 
 
 MODELS = [
@@ -45,6 +43,7 @@ def split_content(documents, chunk_size=1000, chunk_overlap=200):
         chunk_overlap=chunk_overlap,
     )
     chunks = text_splitter.split_documents(documents)
+    print("chunks is created")
 
     return chunks
 
@@ -55,14 +54,18 @@ def setup_vector_database(docs):
         google_api_key=gemini_api_key, 
         model="models/embedding-001"
     )
+    base_dir = Path(__file__).parent.parent
 
-    client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=weaviate_url,
-        auth_credentials=Auth.api_key(weaviate_api_key),
-        skip_init_checks=True
+    persist_directory = os.path.join(base_dir, "data", "chroma_db")
+    os.makedirs(persist_directory, exist_ok=True)
+
+    vector_db = Chroma.from_documents(
+        documents=docs, 
+        embedding=embeddings, 
+        persist_directory=persist_directory
     )
 
-    vector_db = WeaviateVectorStore.from_documents(docs, embeddings, client=client)
+    print(f"Vector database set up at: {persist_directory}")
     return vector_db
 
 
