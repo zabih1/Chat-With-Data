@@ -669,8 +669,13 @@
                         <img src="https://img.youtube.com/vi/${videoId}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
                     `;
                     
-                    // Display summary
-                    document.getElementById('ytInitialMessage').classList.add('d-none');
+                    // Display summary - safely handle the initial message
+                    const initialMessage = document.getElementById('ytInitialMessage');
+                    if (initialMessage) {
+                        initialMessage.classList.add('d-none');
+                    }
+                    
+                    // The summary already comes as HTML from the server now
                     document.getElementById('videoSummaryContainer').innerHTML = `
                         <div class="card">
                             <div class="card-header bg-light">
@@ -692,6 +697,130 @@
                 });
             });
 
+// Regenerate Summary Button
+document.getElementById('regenerateBtn')?.addEventListener('click', function() {
+    const url = document.getElementById('youtubeUrl').value;
+    const model = document.getElementById('ytAiModel').value;
+    
+    document.getElementById('videoSummaryContainer').innerHTML = `
+        <div class="text-center my-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="mt-3">Regenerating summary...</p>
+        </div>
+    `;
+    
+    fetch('/api/youtube-summary', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            youtube_url: url,
+            model: model,
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+        
+        // The summary already comes as HTML from the server now
+        document.getElementById('videoSummaryContainer').innerHTML = `
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Summary</h6>
+                </div>
+                <div class="card-body">
+                    ${data.summary}
+                </div>
+            </div>
+        `;
+    })
+    .catch(error => {
+        document.getElementById('videoSummaryContainer').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Error: ${error.message}
+            </div>
+        `;
+    });
+});
+
+// Copy Summary Button
+document.getElementById('copyBtn')?.addEventListener('click', function() {
+    // Extract the text content only (no HTML tags)
+    const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
+    const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
+    
+    navigator.clipboard.writeText(summaryText)
+        .then(() => {
+            this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Failed to copy:', err);
+        });
+});
+
+    
+            // Regenerate Summary Button - Fix
+            document.getElementById('regenerateBtn')?.addEventListener('click', function() {
+                const url = document.getElementById('youtubeUrl').value;
+                const model = document.getElementById('ytAiModel').value;
+                
+                document.getElementById('videoSummaryContainer').innerHTML = `
+                    <div class="text-center my-5">
+                        <div class="spinner-border text-danger" role="status"></div>
+                        <p class="mt-3">Regenerating summary...</p>
+                    </div>
+                `;
+                
+                fetch('/api/youtube-summary', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        youtube_url: url,
+                        model: model,
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+                    document.getElementById('videoSummaryContainer').innerHTML = `
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                ${data.summary}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    document.getElementById('videoSummaryContainer').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error: ${error.message}
+                        </div>
+                    `;
+                });
+            });
+
+     
             // Database Query Form Handling
             document.getElementById('dbQueryForm').addEventListener('submit', function(e) {
                 e.preventDefault();

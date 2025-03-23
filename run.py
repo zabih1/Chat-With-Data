@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import prepare_website_data, chat_with_website
 from src.text_to_sql import write_query, execute_query, generate_answer
-from app.utils import process_markdown, MODELS, get_model_display_name
+from app.utils import  MODELS, get_model_display_name
 from config import db_uri
 
 app = Flask(__name__, template_folder='templates')
@@ -36,7 +36,7 @@ def youtube_summary_api():
         video_id = extract_video_id(youtube_url)
         summary = generate_summary(youtube_url, model)
         
-        processed_summary = process_markdown(summary)
+        processed_summary = markdown.markdown(summary)
         
         return jsonify({
             'summary': processed_summary,

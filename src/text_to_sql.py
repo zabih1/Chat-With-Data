@@ -5,6 +5,8 @@ from langchain_core.prompts import PromptTemplate
 import markdown
 import re
 import os, sys
+from typing_extensions import TypedDict, Annotated
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -26,6 +28,10 @@ class State(TypedDict):
     answer: str
     db_uri: str
 
+class QueryOutput(TypedDict):
+    query: Annotated[str, ..., "Syntactically valid SQL query."]
+
+
 def write_query(state: State) -> dict:
     try:
         # Check if db_uri exists in state and is not None
@@ -38,28 +44,16 @@ def write_query(state: State) -> dict:
             return {"query": "-- Error: Database not available"}
         
         prompt = query_prompt_template.invoke({
-            "dialect": db.dialect,
-            "top_k": 10,
-            "table_info": db.get_table_info(),
-            "input": state["question"],
-        })
-
-        response = llm1.invoke(prompt)
+        "dialect": db.dialect,
+        "top_k": 1,
+        "table_info": db.get_table_info(),
+        "input": state["question"],
+            })
+        structured_llm = llm3.with_structured_output(QueryOutput)
+        result = structured_llm.invoke(prompt)
+        return {"query": result["query"]}
         
-        # Extract SQL query from response
-        sql_query = response.content if hasattr(response, "content") else str(response)
-        
-        if "```sql" in sql_query:
-            sql_match = re.search(r"```sql\n(.*?)\n```", sql_query, re.DOTALL)
-            if sql_match:
-                sql_query = sql_match.group(1)
-        elif "```" in sql_query:
-            sql_match = re.search(r"```\n(.*?)\n```", sql_query, re.DOTALL)
-            if sql_match:
-                sql_query = sql_match.group(1)
-        
-        return {"query": sql_query}
-    
+         
     except Exception as e:
         return {"query": f"-- Error generating SQL query: {str(e)}"}
 
@@ -92,11 +86,10 @@ def generate_answer(state: State) -> dict:
             f"Question: {state['question']}\n"
             f"SQL Query: {state['query']}\n"
             f"SQL Result: {state['result']}\n\n"
-            "Provide a comprehensive answer that directly addresses the question. "
-            "Include key numbers and insights from the data."
+      
         )
 
-        response = llm1.invoke(prompt)
+        response = llm4.invoke(prompt)
         response_content = response.content if hasattr(response, "content") else str(response)
         html_content = markdown.markdown(response_content)
         return {"answer": html_content}

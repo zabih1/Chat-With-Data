@@ -24,17 +24,6 @@ def get_model_display_name(model_id):
     return model_id  
 
 
-
-def process_markdown(text):
-    processed = text.replace('• ', '* ')
-    processed = processed.replace('**Title:**', '\n**Title:**')
-    processed = processed.replace('**Main Topic:**', '\n**Main Topic:**')
-    processed = processed.replace('**Key Points:**', '\n**Key Points:**')
-    processed = processed.replace('**Conclusion:**', '\n**Conclusion:**')
-    return processed
-
-
-
 # >>>>>>>>>> 📌 Split documents. <<<<<<<<<<<<<<<<<<<<<<
 
 def split_content(documents, chunk_size=1000, chunk_overlap=200):
