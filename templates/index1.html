@@ -16,14 +16,26 @@
         .chat-area {
             height: 60vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1rem;
         }
         .user-message {
             background-color: #e3f2fd;
             border-radius: 12px 12px 0 12px;
+            padding: 0.75rem 1rem;
+            max-width: 75%;
+            align-self: flex-end;
+            word-wrap: break-word;
         }
         .bot-message {
             background-color: #f1f1f1;
             border-radius: 12px 12px 12px 0;
+            padding: 0.75rem 1rem;
+            max-width: 75%;
+            align-self: flex-start;
+            word-wrap: break-word;
         }
         .upload-zone {
             border: 2px dashed #dee2e6;
@@ -35,6 +47,25 @@
             color: #e6e6e6;
             border-radius: 5px;
             font-family: monospace;
+        }
+        /* Fix for long code blocks in chat */
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        /* Status message styling */
+        .text-success {
+            color: #28a745 !important;
+        }
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        /* Loading indicators */
+        .loading-indicator {
+            display: inline-block;
+            margin-right: 0.5rem;
         }
     </style>
 </head>
@@ -390,648 +421,538 @@
     
     <!-- Custom JS -->
     <script>
+
         // Define models
-        const MODELS = [
-            {"id": "llama", "name": "Llama 3"},
-            {"id": "gemini", "name": "Gemini"},
-            {"id": "mistral", "name": "Mistral"},
-            {"id": "deepseek", "name": "DeepSeek"}
-        ];
-        
-        // Populate model dropdowns
-        function populateModels() {
-            const webModelSelect = document.getElementById('webAiModel');
-            const ytModelSelect = document.getElementById('ytAiModel');
-            
-            // Clear existing options
-            webModelSelect.innerHTML = '';
-            ytModelSelect.innerHTML = '';
-            
-            // Add options from MODELS array
-            MODELS.forEach(model => {
-                // For website chat dropdown
-                const webOption = document.createElement('option');
-                webOption.value = model.id;
-                webOption.textContent = model.name;
-                if (model.id === 'deepseek') webOption.selected = true;
-                webModelSelect.appendChild(webOption);
-                
-                // For YouTube summarizer dropdown
-                const ytOption = document.createElement('option');
-                ytOption.value = model.id;
-                ytOption.textContent = model.name;
-                if (model.id === 'llama') ytOption.selected = true;
-                ytModelSelect.appendChild(ytOption);
-            });
+    const MODELS = [
+    {"id": "llama", "name": "Llama 3"},
+    {"id": "gemini", "name": "Gemini"},
+    {"id": "mistral", "name": "Mistral"},
+    {"id": "deepseek", "name": "DeepSeek"}
+    ];
+
+    // Global variables for state management
+    let currentWebsiteUrl = '';
+    let recentWebsites = [];
+    let recentVideos = [];
+
+    // Helper function to update recent items lists
+    function updateRecentList(containerClass, items, clickCallback) {
+    const container = document.querySelector(`.${containerClass}`);
+    if (!container) return;
+
+    if (items.length === 0) {
+        container.innerHTML = '<p class="text-muted small">No recent items</p>';
+        return;
+    }
+
+    let html = '';
+    items.forEach(item => {
+        // Get domain name for better display
+        let displayText;
+        try {
+            const url = new URL(item);
+            if (url.hostname.includes('youtube')) {
+                displayText = 'YouTube Video';
+            } else {
+                displayText = url.hostname.replace('www.', '');
+            }
+        } catch {
+            // Fallback if URL parsing fails
+            displayText = item.length > 30 ? item.substring(0, 27) + '...' : item;
         }
         
-        // Run on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            populateModels();
-            
-            // Store recent websites and videos
-            const recentWebsites = [];
-            const recentVideos = [];
-            
-            // Website URL Form Handling - NEW UPDATED CODE
-            document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const urlInput = document.getElementById('websiteUrl');
-                const url = urlInput.value.trim();
-                
-                if (!url) return;
-                
-                // Validate URL
-                try {
-                    new URL(url);
-                } catch (_) {
-                    document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
-                    return;
-                }
-                
-                // Show loading state
-                const submitBtn = document.getElementById('websiteSubmitBtn');
-                const originalBtnHTML = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                submitBtn.disabled = true;
-                document.getElementById('websiteStatus').textContent = 'Loading and indexing website content...';
-                
-                // Call the prepare-website API to scrape and index the website
-                fetch('/api/prepare-website', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        website_url: url
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Reset submit button
-                    submitBtn.innerHTML = originalBtnHTML;
-                    submitBtn.disabled = false;
-                    
-                    if (data.success) {
-                        document.getElementById('websiteStatus').textContent = 'Website content loaded and indexed successfully!';
-                        
-                        // Add to recent websites if not already there
-                        if (!recentWebsites.includes(url)) {
-                            recentWebsites.unshift(url);
-                            if (recentWebsites.length > 5) recentWebsites.pop(); // Keep only 5 recent items
-                            
-                            // Update recent websites list
-                            updateRecentList('recent-websites', recentWebsites, (url) => {
-                                document.getElementById('websiteUrl').value = url;
-                                document.getElementById('websiteUrlForm').dispatchEvent(new Event('submit'));
-                            });
-                        }
-                        
-                        // Store the website URL
-                        document.getElementById('currentWebsite').textContent = url;
-                        
-                        // Enable chat interface
-                        document.getElementById('webMessageInput').disabled = false;
-                        document.getElementById('webChatForm').querySelector('button').disabled = false;
-                        
-                        // Clear the initial message
-                        document.getElementById('webInitialMessage').classList.add('d-none');
-                        
-                        // Add welcome message
-                        const chatContainer = document.getElementById('webChatContainer');
-                        const botMessageDiv = document.createElement('div');
-                        botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
-                        botMessageDiv.innerHTML = `
-                            <p class="mb-0">Website content processed and indexed. What would you like to know about this website?</p>
-                        `;
-                        chatContainer.appendChild(botMessageDiv);
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    } else {
-                        document.getElementById('websiteStatus').textContent = data.error || 'Unknown error';
-                    }
-                })
-                .catch(error => {
-                    submitBtn.innerHTML = originalBtnHTML;
-                    submitBtn.disabled = false;
-                    document.getElementById('websiteStatus').textContent = 'Error: ' + error.message;
-                });
-            });
-
-            // Website Chat Form Handling - NEW UPDATED CODE
-            document.getElementById('webChatForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const messageInput = document.getElementById('webMessageInput');
-                const message = messageInput.value.trim();
-                const website = document.getElementById('currentWebsite').textContent;
-                const model = document.getElementById('webAiModel').value;
-                
-                if (!message || website === 'No website selected') return;
-                
-                // Add user message to chat
-                const chatContainer = document.getElementById('webChatContainer');
-                const userMessageDiv = document.createElement('div');
-                userMessageDiv.className = 'user-message p-3 mb-3 ms-auto w-75';
-                userMessageDiv.textContent = message;
-                chatContainer.appendChild(userMessageDiv);
-                
-                // Clear input
-                messageInput.value = '';
-                
-                // Add loading indicator
-                const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'bot-message p-3 mb-3 w-75';
-                loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
-                chatContainer.appendChild(loadingDiv);
-                
-                // Scroll to bottom
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-                
-                // Send request to API
-                fetch('/api/chat-with-website', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        website_url: website,
-                        question: message,
-                        model: model
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Remove loading indicator
-                    chatContainer.removeChild(loadingDiv);
-                    
-                    // Add bot response
-                    const botMessageDiv = document.createElement('div');
-                    botMessageDiv.className = 'bot-message p-3 mb-3 w-75';
-                    botMessageDiv.innerHTML = data.answer;
-                    chatContainer.appendChild(botMessageDiv);
-                    
-                    // Scroll to bottom
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                })
-                .catch(error => {
-                    // Remove loading indicator
-                    chatContainer.removeChild(loadingDiv);
-                    
-                    // Add error message
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'bot-message p-3 mb-3 w-75 text-danger';
-                    errorDiv.textContent = 'Error: ' + error.message;
-                    chatContainer.appendChild(errorDiv);
-                    
-                    // Scroll to bottom
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                });
-            });
-
-           
-            // YouTube URL Form Handling - 
-            document.getElementById('youtubeUrlForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const urlInput = document.getElementById('youtubeUrl');
-                const url = urlInput.value.trim();
-                const model = document.getElementById('ytAiModel').value;
-                
-                if (!url) return;
-                
-                // Validate YouTube URL
-                if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
-                    document.getElementById('youtubeStatus').textContent = 'Please enter a valid YouTube URL';
-                    return;
-                }
-                
-                // Show loading state
-                const submitBtn = document.getElementById('youtubeSubmitBtn');
-                const originalBtnHTML = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                submitBtn.disabled = true;
-                document.getElementById('youtubeStatus').textContent = 'Processing video...';
-                
-                // Call API to get video summary - properly passing the model
-                fetch('/api/youtube-summary', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        youtube_url: url,
-                        model: model
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Reset submit button
-                    submitBtn.innerHTML = originalBtnHTML;
-                    submitBtn.disabled = false;
-                    document.getElementById('youtubeStatus').textContent = 'Video processed successfully';
-                    
-                    // Extract video ID for thumbnail
-                    const videoId = data.video_id;
-                    
-                    // Display video info
-                    document.getElementById('videoInfoContainer').classList.remove('d-none');
-                    document.getElementById('videoTitle').textContent = "YouTube Video";
-                    document.getElementById('videoChannel').textContent = "YouTube Channel";
-                    document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-                    document.getElementById('videoThumbnail').innerHTML = `
-                        <img src="https://img.youtube.com/vi/${videoId}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
-                    `;
-                    
-                    // Display summary - safely handle the initial message
-                    const initialMessage = document.getElementById('ytInitialMessage');
-                    if (initialMessage) {
-                        initialMessage.classList.add('d-none');
-                    }
-                    
-                    // The summary already comes as HTML from the server now
-                    document.getElementById('videoSummaryContainer').innerHTML = `
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                ${data.summary}
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Show actions
-                    document.getElementById('summaryActionsForm').classList.remove('d-none');
-                })
-                .catch(error => {
-                    submitBtn.innerHTML = originalBtnHTML;
-                    submitBtn.disabled = false;
-                    document.getElementById('youtubeStatus').textContent = 'Error: ' + error.message;
-                });
-            });
-
-// Regenerate Summary Button - Fixed version
-document.getElementById('regenerateBtn').addEventListener('click', function() {
-    const url = document.getElementById('youtubeUrl').value;
-    const model = document.getElementById('ytAiModel').value;
-    
-    document.getElementById('videoSummaryContainer').innerHTML = `
-        <div class="text-center my-5">
-            <div class="spinner-border text-danger" role="status"></div>
-            <p class="mt-3">Regenerating summary...</p>
-        </div>
-    `;
-    
-    // Ensure the model is properly passed
-    fetch('/api/youtube-summary', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            youtube_url: url,
-            model: model
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-        
-        document.getElementById('videoSummaryContainer').innerHTML = `
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">Summary</h6>
-                </div>
-                <div class="card-body">
-                    ${data.summary}
-                </div>
-            </div>
-        `;
-    })
-    .catch(error => {
-        document.getElementById('videoSummaryContainer').innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Error: ${error.message}
-            </div>
-        `;
+        html += `<a href="#" class="list-group-item list-group-item-action small py-2" title="${item}">${displayText}</a>`;
     });
-});
 
-    
-// Regenerate Summary Button
-document.getElementById('regenerateBtn')?.addEventListener('click', function() {
-    const url = document.getElementById('youtubeUrl').value;
-    const model = document.getElementById('ytAiModel').value;
-    
-    document.getElementById('videoSummaryContainer').innerHTML = `
-        <div class="text-center my-5">
-            <div class="spinner-border text-danger" role="status"></div>
-            <p class="mt-3">Regenerating summary...</p>
-        </div>
-    `;
-    
-    fetch('/api/youtube-summary', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            youtube_url: url,
-            model: model,
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-        
-        // The summary already comes as HTML from the server now
-        document.getElementById('videoSummaryContainer').innerHTML = `
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">Summary</h6>
-                </div>
-                <div class="card-body">
-                    ${data.summary}
-                </div>
-            </div>
-        `;
-    })
-    .catch(error => {
-        document.getElementById('videoSummaryContainer').innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Error: ${error.message}
-            </div>
-        `;
-    });
-});
+    container.innerHTML = html;
 
-// Copy Summary Button
-document.getElementById('copyBtn')?.addEventListener('click', function() {
-    // Extract the text content only (no HTML tags)
-    const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
-    const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
-    
-    navigator.clipboard.writeText(summaryText)
-        .then(() => {
-            this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
-            }, 2000);
-        })
-        .catch(err => {
-            console.error('Failed to copy:', err);
+    // Add click event listeners
+    container.querySelectorAll('a').forEach((link, index) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            clickCallback(items[index]);
         });
-});
+    });
+    }
 
-    
-            // Regenerate Summary Button - Fix
-            document.getElementById('regenerateBtn')?.addEventListener('click', function() {
-                const url = document.getElementById('youtubeUrl').value;
-                const model = document.getElementById('ytAiModel').value;
-                
-                document.getElementById('videoSummaryContainer').innerHTML = `
-                    <div class="text-center my-5">
-                        <div class="spinner-border text-danger" role="status"></div>
-                        <p class="mt-3">Regenerating summary...</p>
-                    </div>
-                `;
-                
-                fetch('/api/youtube-summary', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        youtube_url: url,
-                        model: model,
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-                    document.getElementById('videoSummaryContainer').innerHTML = `
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                ${data.summary}
-                            </div>
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    document.getElementById('videoSummaryContainer').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error: ${error.message}
-                        </div>
-                    `;
-                });
-            });
+    // Populate model dropdowns
+    function populateModels() {
+    const webModelSelect = document.getElementById('webAiModel');
+    const ytModelSelect = document.getElementById('ytAiModel');
 
-     
-            // Database Query Form Handling
-            document.getElementById('dbQueryForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const questionInput = document.getElementById('dbQueryInput');
-                const question = questionInput.value.trim();
-                
-                if (!question) return;
-                
-                // Show loading state
-                const queryResults = document.getElementById('queryResults');
-                queryResults.innerHTML = `
-                    <div class="text-center my-5">
-                        <div class="spinner-border text-success" role="status"></div>
-                        <p class="mt-3">Processing your query...</p>
-                    </div>
-                `;
-                
-                // Send request to API
-                fetch('/api/text_to_sql', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        'question': question
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Display the results
-                    queryResults.innerHTML = `
-                        <div class="mb-3">
-                            <h6>SQL Query:</h6>
-                            <pre class="sql-code p-3">${data.query}</pre>
-                        </div>
-                        <div>
-                            <h6>Answer:</h6>
-                            <div class="p-3 bg-light rounded">
-                                ${data.answer}
-                            </div>
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    queryResults.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error: ${error.message}
-                        </div>
-                    `;
-                });
-            });
+    // Clear existing options
+    webModelSelect.innerHTML = '';
+    ytModelSelect.innerHTML = '';
 
-            // Summary Copy Button
-            document.getElementById('copyBtn')?.addEventListener('click', function() {
-                const summaryText = document.querySelector('#videoSummaryContainer .card-body').textContent;
-                navigator.clipboard.writeText(summaryText)
-                    .then(() => {
-                        this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
-                        setTimeout(() => {
-                            this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
-                        }, 2000);
-                    })
-                    .catch(err => {
-                        console.error('Failed to copy:', err);
-                    });
-            });
+    // Add options from MODELS array
+    MODELS.forEach(model => {
+        // For website chat dropdown
+        const webOption = document.createElement('option');
+        webOption.value = model.id;
+        webOption.textContent = model.name;
+        if (model.id === 'deepseek') webOption.selected = true;
+        webModelSelect.appendChild(webOption);
+        
+        // For YouTube summarizer dropdown
+        const ytOption = document.createElement('option');
+        ytOption.value = model.id;
+        ytOption.textContent = model.name;
+        if (model.id === 'llama') ytOption.selected = true;
+        ytModelSelect.appendChild(ytOption);
+    });
+    }
 
-            // Download Summary Button
-            document.getElementById('downloadBtn')?.addEventListener('click', function() {
-                const videoTitle = document.getElementById('videoTitle').textContent;
-                const summaryText = document.querySelector('#videoSummaryContainer .card-body').textContent;
-                
-                const element = document.createElement('a');
-                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(summaryText));
-                element.setAttribute('download', `${videoTitle} - Summary.txt`);
-                element.style.display = 'none';
-                
-                document.body.appendChild(element);
-                element.click();
-                document.body.removeChild(element);
-            });
-
-            // Regenerate Summary Button
-            document.getElementById('regenerateBtn')?.addEventListener('click', function() {
-                const url = document.getElementById('youtubeUrl').value;
-                const model = document.getElementById('ytAiModel').value;
-                
-                document.getElementById('videoSummaryContainer').innerHTML = `
-                    <div class="text-center my-5">
-                        <div class="spinner-border text-danger" role="status"></div>
-                        <p class="mt-3">Regenerating summary...</p>
-                    </div>
-                `;
-                
-                fetch('/api/youtube-summary', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        youtube_url: url,
-                        model: model,
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    document.getElementById('videoSummaryContainer').innerHTML = `
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">Summary</h6>
-                            </div>
-                            <div class="card-body">
-                                ${data.summary}
-                            </div>
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    document.getElementById('videoSummaryContainer').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error: ${error.message}
-                        </div>
-                    `;
-                });
-            });
+    // Initialize website URL form handling
+    function initWebsiteUrlForm() {
+    document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const urlInput = document.getElementById('websiteUrl');
+        const url = urlInput.value.trim();
+        
+        if (!url) return;
+        
+        // Validate URL
+        try {
+            new URL(url);
+        } catch (_) {
+            document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
+            document.getElementById('websiteStatus').className = 'small text-danger mt-2';
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('websiteSubmitBtn');
+        const originalBtnHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        submitBtn.disabled = true;
+        document.getElementById('websiteStatus').textContent = 'Loading and indexing website content...';
+        document.getElementById('websiteStatus').className = 'small text-muted mt-2';
+        
+        // Call the prepare-website API to scrape and index the website
+        fetch('/api/prepare-website', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                website_url: url
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Reset submit button
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
             
-            // Helper function to update recent items lists
-            function updateRecentList(containerClass, items, clickCallback) {
-                const container = document.querySelector(`.${containerClass}`);
-                if (!container) return;
+            if (data.success) {
+                document.getElementById('websiteStatus').textContent = 'Website content loaded and indexed successfully!';
+                document.getElementById('websiteStatus').className = 'small text-success mt-2';
                 
-                if (items.length === 0) {
-                    container.innerHTML = '<p class="text-muted small">No recent items</p>';
-                    return;
+                // Store the current website URL
+                currentWebsiteUrl = url;
+                
+                // Add to recent websites if not already there
+                if (!recentWebsites.includes(url)) {
+                    recentWebsites.unshift(url);
+                    if (recentWebsites.length > 5) recentWebsites.pop(); // Keep only 5 recent items
+                    
+                    // Update recent websites list
+                    updateRecentList('recent-websites', recentWebsites, (url) => {
+                        document.getElementById('websiteUrl').value = url;
+                        document.getElementById('websiteUrlForm').dispatchEvent(new Event('submit'));
+                    });
                 }
                 
-                let html = '';
-                items.forEach(item => {
-                    // Truncate URL for display
-                    const displayUrl = item.length > 30 ? item.substring(0, 27) + '...' : item;
-                    html += `<a href="#" class="list-group-item list-group-item-action small py-2">${displayUrl}</a>`;
-                });
+                // Store the website URL
+                document.getElementById('currentWebsite').textContent = url;
                 
-                container.innerHTML = html;
+                // Enable chat interface
+                document.getElementById('webMessageInput').disabled = false;
+                document.getElementById('webChatForm').querySelector('button').disabled = false;
                 
-                // Add click event listeners
-                container.querySelectorAll('a').forEach((link, index) => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        clickCallback(items[index]);
-                    });
+                // Clear the chat container
+                const chatContainer = document.getElementById('webChatContainer');
+                chatContainer.innerHTML = '';
+                
+                // Add welcome message
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'bot-message';
+                botMessageDiv.innerHTML = `
+                    <p class="mb-0">Website content processed and indexed. What would you like to know about this website?</p>
+                `;
+                chatContainer.appendChild(botMessageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } else {
+                document.getElementById('websiteStatus').textContent = data.error || 'Unknown error';
+                document.getElementById('websiteStatus').className = 'small text-danger mt-2';
+            }
+        })
+        .catch(error => {
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
+            document.getElementById('websiteStatus').textContent = 'Error: ' + error.message;
+            document.getElementById('websiteStatus').className = 'small text-danger mt-2';
+        });
+    });
+    }
+
+    // Initialize website chat form handling
+    function initWebsiteChatForm() {
+    document.getElementById('webChatForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const messageInput = document.getElementById('webMessageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message || !currentWebsiteUrl) return;
+        
+        const model = document.getElementById('webAiModel').value;
+        
+        // Add user message to chat
+        const chatContainer = document.getElementById('webChatContainer');
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'user-message';
+        userMessageDiv.textContent = message;
+        chatContainer.appendChild(userMessageDiv);
+        
+        // Clear input
+        messageInput.value = '';
+        
+        // Add loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'bot-message';
+        loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
+        chatContainer.appendChild(loadingDiv);
+        
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+        // Send request to API
+        fetch('/api/chat-with-website', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                website_url: currentWebsiteUrl,
+                question: message,
+                model: model
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Remove loading indicator
+            chatContainer.removeChild(loadingDiv);
+            
+            // Add bot response
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'bot-message';
+            botMessageDiv.innerHTML = data.answer;
+            chatContainer.appendChild(botMessageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+            // Remove loading indicator
+            chatContainer.removeChild(loadingDiv);
+            
+            // Add error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'bot-message';
+            errorDiv.innerHTML = `<p class="text-danger mb-0">Error: ${error.message}</p>`;
+            chatContainer.appendChild(errorDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+    });
+    }
+
+    // Initialize YouTube URL form handling
+    function initYoutubeUrlForm() {
+    document.getElementById('youtubeUrlForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const urlInput = document.getElementById('youtubeUrl');
+        const url = urlInput.value.trim();
+        const model = document.getElementById('ytAiModel').value;
+        
+        if (!url) return;
+        
+        // Validate YouTube URL
+        if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
+            document.getElementById('youtubeStatus').textContent = 'Please enter a valid YouTube URL';
+            document.getElementById('youtubeStatus').className = 'small text-danger mt-2';
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('youtubeSubmitBtn');
+        const originalBtnHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        submitBtn.disabled = true;
+        document.getElementById('youtubeStatus').textContent = 'Processing video...';
+        document.getElementById('youtubeStatus').className = 'small text-muted mt-2';
+        
+        // Call API to get video summary
+        fetch('/api/youtube-summary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                youtube_url: url,
+                model: model,
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Reset submit button
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
+            document.getElementById('youtubeStatus').textContent = 'Video processed successfully';
+            document.getElementById('youtubeStatus').className = 'small text-success mt-2';
+            
+            // Add to recent videos if not already there
+            if (!recentVideos.includes(url)) {
+                recentVideos.unshift(url);
+                if (recentVideos.length > 5) recentVideos.pop(); // Keep only 5 recent items
+                
+                // Update recent videos list
+                updateRecentList('recent-videos', recentVideos, (url) => {
+                    document.getElementById('youtubeUrl').value = url;
+                    document.getElementById('youtubeUrlForm').dispatchEvent(new Event('submit'));
                 });
             }
+            
+            // Extract video ID for thumbnail
+            const videoId = data.video_id;
+            
+            // Display video info
+            document.getElementById('videoInfoContainer').classList.remove('d-none');
+            document.getElementById('videoTitle').textContent = "YouTube Video";
+            document.getElementById('videoChannel').textContent = "YouTube Channel";
+            document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+            document.getElementById('videoThumbnail').innerHTML = `
+                <img src="https://img.youtube.com/vi/${videoId}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
+            `;
+            
+            // Display summary - safely handle the initial message
+            const initialMessage = document.getElementById('ytInitialMessage');
+            if (initialMessage) {
+                initialMessage.classList.add('d-none');
+            }
+            
+            // The summary already comes as HTML from the server now
+            document.getElementById('videoSummaryContainer').innerHTML = `
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        ${data.summary}
+                    </div>
+                </div>
+            `;
+            
+            // Show actions
+            document.getElementById('summaryActionsForm').classList.remove('d-none');
+        })
+        .catch(error => {
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
+            document.getElementById('youtubeStatus').textContent = 'Error: ' + error.message;
+            document.getElementById('youtubeStatus').className = 'small text-danger mt-2';
         });
-    </script>
-</body>
+    });
+    }
 
-</html>
+    // Initialize database query form handling
+    function initDatabaseQueryForm() {
+    document.getElementById('dbQueryForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const questionInput = document.getElementById('dbQueryInput');
+        const question = questionInput.value.trim();
+        
+        if (!question) return;
+        
+        // Show loading state
+        const queryResults = document.getElementById('queryResults');
+        queryResults.innerHTML = `
+            <div class="text-center my-5">
+                <div class="spinner-border text-success" role="status"></div>
+                <p class="mt-3">Processing your query...</p>
+            </div>
+        `;
+        
+        // Send request to API
+        fetch('/api/text_to_sql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'question': question
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Display the results
+            queryResults.innerHTML = `
+                <div class="mb-3">
+                    <h6>SQL Query:</h6>
+                    <pre class="sql-code p-3">${data.query}</pre>
+                </div>
+                <div>
+                    <h6>Answer:</h6>
+                    <div class="p-3 bg-light rounded">
+                        ${data.answer}
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            queryResults.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error: ${error.message}
+                </div>
+            `;
+        });
+    });
+    }
+
+    // Initialize YouTube summary action buttons
+    function initYoutubeSummaryActions() {
+    // Copy Summary Button
+    document.getElementById('copyBtn').addEventListener('click', function() {
+        // Extract the text content only (no HTML tags)
+        const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
+        const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
+        
+        navigator.clipboard.writeText(summaryText)
+            .then(() => {
+                this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy:', err);
+                this.innerHTML = '<i class="fas fa-times me-1"></i> Failed';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+                }, 2000);
+            });
+    });
+
+    // Download Summary Button
+    document.getElementById('downloadBtn').addEventListener('click', function() {
+        const videoTitle = document.getElementById('videoTitle').textContent || 'YouTube Video';
+        const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
+        const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
+        
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(summaryText));
+        element.setAttribute('download', `${videoTitle} - Summary.txt`);
+        element.style.display = 'none';
+        
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    });
+
+    // Regenerate Summary Button
+    document.getElementById('regenerateBtn').addEventListener('click', function() {
+        const url = document.getElementById('youtubeUrl').value;
+        const model = document.getElementById('ytAiModel').value;
+        
+        document.getElementById('videoSummaryContainer').innerHTML = `
+            <div class="text-center my-5">
+                <div class="spinner-border text-danger" role="status"></div>
+                <p class="mt-3">Regenerating summary...</p>
+            </div>
+        `;
+        
+        fetch('/api/youtube-summary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                youtube_url: url,
+                model: model,
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+            document.getElementById('videoSummaryContainer').innerHTML = `
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        ${data.summary}
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('videoSummaryContainer').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error: ${error.message}
+                </div>
+            `;
+        });
+    });
+    }
+
+    // Run initialization when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the UI
+    populateModels();
+
+    // Initialize form handlers
+    initWebsiteUrlForm();
+    initWebsiteChatForm();
+    initYoutubeUrlForm();
+    initDatabaseQueryForm();
+    initYoutubeSummaryActions();
+    });
+    </script>
+          
+        </body>
