@@ -117,6 +117,10 @@
                         data-bs-target="#youtubeTab">
                         <i class="fab fa-youtube me-2"></i> YouTube Summarizer
                     </a>
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="list"
+                        data-bs-target="#documentChatTab">
+                            <i class="fas fa-file-alt me-2"></i> Document Chat
+                    </a>
                 </div>
 
                 <h5 class="mb-3 mt-4 px-3">Recent Data</h5>
@@ -162,6 +166,16 @@
                                             <i class="fab fa-youtube fa-3x text-danger mb-3"></i>
                                             <h5>YouTube Summarizer</h5>
                                             <p class="text-muted">Get summaries of YouTube videos</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm h-100" data-bs-toggle="list"
+                                        data-bs-target="#documentChatTab">
+                                        <div class="card-body text-center py-4">
+                                            <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                                            <h5>Document Chat</h5>
+                                            <p class="text-muted">Chat with your uploaded documents</p>
                                         </div>
                                     </div>
                                 </div>
@@ -411,6 +425,87 @@
                             </div>
                         </div>
                     </div>
+                    <!-- chat with document Tab -->
+                    <div class="tab-pane fade h-100" id="documentChatTab">
+                        <div class="container h-100">
+                            <div class="row h-100">
+                                <!-- Document Upload Section -->
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">Chat with Documents</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-4">
+                                                <label for="docAiModel" class="form-label">AI Model</label>
+                                                <select class="form-select" id="docAiModel">
+                                                    <!-- Will be populated dynamically -->
+                                                </select>
+                                            </div>
+                                            <form id="documentUploadForm" class="mb-4">
+                                                <label for="documentFile" class="form-label">Upload Document</label>
+                                                <div class="upload-zone p-3 text-center mb-3" id="dropZone">
+                                                    <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-primary"></i>
+                                                    <p class="mb-1">Drop your file here or click to browse</p>
+                                                    <p class="small text-muted mb-0">PDF, TXT, DOCX (Max 10MB)</p>
+                                                    <input type="file" id="documentFile" name="document" class="d-none">
+                                                </div>
+                                                <button type="submit" class="btn btn-primary w-100" id="uploadDocBtn">
+                                                    <i class="fas fa-upload me-1"></i> Upload Document
+                                                </button>
+                                                <div id="documentStatus" class="small text-muted mt-2"></div>
+                                            </form>
+                                            
+                                            <div class="d-grid mb-4">
+                                                <button id="clearDocsBtn" class="btn btn-outline-danger">
+                                                    <i class="fas fa-trash me-1"></i> Clear All Documents
+                                                </button>
+                                            </div>
+                                            
+                                            <div class="mt-4">
+                                                <h6 class="border-bottom pb-2">Uploaded Documents</h6>
+                                                <div class="list-group uploaded-documents">
+                                                    <p class="text-muted small">No documents uploaded</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                    
+                                <!-- Document Chat Section -->
+                                <div class="col-md-9">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">Document Chat</h5>
+                                        </div>
+                                        <div class="card-body p-0 d-flex flex-column">
+                                            <div class="d-flex justify-content-between p-3 border-bottom">
+                                                <div>
+                                                    <h6 class="mb-0" id="currentDocuments">No documents uploaded</h6>
+                                                </div>
+                                            </div>
+                                            <div id="docChatContainer" class="chat-area p-3 flex-grow-1 bg-light">
+                                                <div class="text-center my-5 text-muted" id="docInitialMessage">
+                                                    <i class="fas fa-file-alt fa-3x mb-3"></i>
+                                                    <p>Upload a document to start chatting</p>
+                                                </div>
+                                            </div>
+                                            <div class="border-top p-3">
+                                                <form id="docChatForm" class="d-flex gap-2">
+                                                    <input type="text" id="docMessageInput" class="form-control"
+                                                        placeholder="Ask a question about your document..." disabled />
+                                                    <button type="submit" class="btn btn-primary" disabled>
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -952,6 +1047,347 @@
     initYoutubeUrlForm();
     initDatabaseQueryForm();
     initYoutubeSummaryActions();
+    });
+
+
+    let uploadedDocuments = [];
+
+    // Initialize document upload form handling
+    function initDocumentUploadForm() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('documentFile');
+        
+        // Click on drop zone to trigger file input
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Add visual feedback for drag enter/leave
+        dropZone.addEventListener('dragenter', () => {
+            dropZone.classList.add('border', 'border-primary');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border', 'border-primary');
+        });
+        
+        // Handle file drop
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('border', 'border-primary');
+            fileInput.files = e.dataTransfer.files;
+        });
+        
+        // Handle form submission
+        document.getElementById('documentUploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('documentFile');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                document.getElementById('documentStatus').textContent = 'Please select a file to upload';
+                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                document.getElementById('documentStatus').textContent = 'File size exceeds 10MB limit';
+                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+                return;
+            }
+            
+            // Check file extension
+            const allowedExtensions = ['pdf', 'txt', 'docx'];
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedExtensions.includes(fileExtension)) {
+                document.getElementById('documentStatus').textContent = 'Only PDF, TXT, and DOCX files are supported';
+                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+                return;
+            }
+            
+            // Show loading state
+            const uploadBtn = document.getElementById('uploadDocBtn');
+            const originalBtnHTML = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            uploadBtn.disabled = true;
+            document.getElementById('documentStatus').textContent = 'Uploading and processing document...';
+            document.getElementById('documentStatus').className = 'small text-muted mt-2';
+            
+            // Create a FormData object to send the file
+            const formData = new FormData();
+            formData.append('document', file);
+            
+            // Send the file to the server
+            fetch('/api/upload-document', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Reset upload button
+                uploadBtn.innerHTML = originalBtnHTML;
+                uploadBtn.disabled = false;
+                
+                if (data.success) {
+                    document.getElementById('documentStatus').textContent = 'Document uploaded and processed successfully!';
+                    document.getElementById('documentStatus').className = 'small text-success mt-2';
+                    
+                    // Add to uploaded documents list
+                    if (!uploadedDocuments.includes(data.document_name)) {
+                        uploadedDocuments.push(data.document_name);
+                        
+                        // Update uploaded documents list
+                        updateUploadedDocumentsList();
+                    }
+                    
+                    // Update current documents display
+                    updateCurrentDocumentsDisplay();
+                    
+                    // Clear file input
+                    fileInput.value = '';
+                    
+                    // Enable chat interface
+                    document.getElementById('docMessageInput').disabled = false;
+                    document.getElementById('docChatForm').querySelector('button').disabled = false;
+                    
+                    // Clear the chat container
+                    const chatContainer = document.getElementById('docChatContainer');
+                    chatContainer.innerHTML = '';
+                    
+                    // Add welcome message
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.className = 'bot-message';
+                    botMessageDiv.innerHTML = `
+                        <p class="mb-0">Document "${data.document_name}" has been processed. What would you like to know about it?</p>
+                    `;
+                    chatContainer.appendChild(botMessageDiv);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                } else {
+                    document.getElementById('documentStatus').textContent = data.error || 'Unknown error';
+                    document.getElementById('documentStatus').className = 'small text-danger mt-2';
+                }
+            })
+            .catch(error => {
+                uploadBtn.innerHTML = originalBtnHTML;
+                uploadBtn.disabled = false;
+                document.getElementById('documentStatus').textContent = 'Error: ' + error.message;
+                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+            });
+        });
+    }
+    
+    // Update uploaded documents list
+    function updateUploadedDocumentsList() {
+        const container = document.querySelector('.uploaded-documents');
+        
+        if (uploadedDocuments.length === 0) {
+            container.innerHTML = '<p class="text-muted small">No documents uploaded</p>';
+            return;
+        }
+        
+        let html = '';
+        uploadedDocuments.forEach(document => {
+            html += `
+                <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                    <span class="text-truncate" title="${document}">
+                        <i class="fas fa-file me-2"></i> ${document}
+                    </span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // Update current documents display
+    function updateCurrentDocumentsDisplay() {
+        const currentDocumentsEl = document.getElementById('currentDocuments');
+        
+        if (uploadedDocuments.length === 0) {
+            currentDocumentsEl.textContent = 'No documents uploaded';
+            return;
+        }
+        
+        if (uploadedDocuments.length === 1) {
+            currentDocumentsEl.textContent = `Current document: ${uploadedDocuments[0]}`;
+        } else {
+            currentDocumentsEl.textContent = `${uploadedDocuments.length} documents uploaded`;
+        }
+    }
+    
+    // Initialize document chat form handling
+    function initDocChatForm() {
+        document.getElementById('docChatForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const messageInput = document.getElementById('docMessageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || uploadedDocuments.length === 0) return;
+            
+            const model = document.getElementById('docAiModel').value;
+            
+            // Add user message to chat
+            const chatContainer = document.getElementById('docChatContainer');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'user-message';
+            userMessageDiv.textContent = message;
+            chatContainer.appendChild(userMessageDiv);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'bot-message';
+            loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Thinking...';
+            chatContainer.appendChild(loadingDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Send request to API
+            fetch('/api/chat-with-document', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: message,
+                    model: model
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Remove loading indicator
+                chatContainer.removeChild(loadingDiv);
+                
+                // Add bot response
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'bot-message';
+                botMessageDiv.innerHTML = data.answer;
+                chatContainer.appendChild(botMessageDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            })
+            .catch(error => {
+                // Remove loading indicator
+                chatContainer.removeChild(loadingDiv);
+                
+                // Add error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bot-message';
+                errorDiv.innerHTML = `<p class="text-danger mb-0">Error: ${error.message}</p>`;
+                chatContainer.appendChild(errorDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+        });
+    }
+    
+    // Initialize clear documents button
+    function initClearDocumentsButton() {
+        document.getElementById('clearDocsBtn').addEventListener('click', function() {
+            if (uploadedDocuments.length === 0) {
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to clear all uploaded documents? This action cannot be undone.')) {
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+            
+            fetch('/api/clear-documents', {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-trash me-1"></i> Clear All Documents';
+                
+                if (data.success) {
+                    uploadedDocuments = [];
+                    updateUploadedDocumentsList();
+                    updateCurrentDocumentsDisplay();
+                    
+                    // Reset chat interface
+                    document.getElementById('docMessageInput').disabled = true;
+                    document.getElementById('docChatForm').querySelector('button').disabled = true;
+                    
+                    // Clear the chat container and show initial message
+                    document.getElementById('docChatContainer').innerHTML = `
+                        <div class="text-center my-5 text-muted" id="docInitialMessage">
+                            <i class="fas fa-file-alt fa-3x mb-3"></i>
+                            <p>Upload a document to start chatting</p>
+                        </div>
+                    `;
+                    
+                    // Show success message
+                    document.getElementById('documentStatus').textContent = 'All documents cleared successfully';
+                    document.getElementById('documentStatus').className = 'small text-success mt-2';
+                } else {
+                    document.getElementById('documentStatus').textContent = data.error || 'Unknown error';
+                    document.getElementById('documentStatus').className = 'small text-danger mt-2';
+                }
+            })
+            .catch(error => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-trash me-1"></i> Clear All Documents';
+                document.getElementById('documentStatus').textContent = 'Error: ' + error.message;
+                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+            });
+        });
+    }
+    
+    // Add to initialization when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Previous initialization code...
+        
+        // Populate the document chat model dropdown
+        const docModelSelect = document.getElementById('docAiModel');
+        docModelSelect.innerHTML = '';
+        MODELS.forEach(model => {
+            const docOption = document.createElement('option');
+            docOption.value = model.id;
+            docOption.textContent = model.name;
+            if (model.id === 'deepseek') docOption.selected = true;
+            docModelSelect.appendChild(docOption);
+        });
+        
+        // Initialize document chat functionality
+        initDocumentUploadForm();
+        initDocChatForm();
+        initClearDocumentsButton();
     });
     </script>
           
