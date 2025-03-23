@@ -9,7 +9,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import prepare_website_data, chat_with_website
 from src.text_to_sql import write_query, execute_query, generate_answer
-from app.utils import  MODELS, get_model_display_name
+from src.chat_with_documents import chat_with_document, load_document, clear_documents
+from app.utils import MODELS, get_model_display_name
 from config import db_uri
 
 app = Flask(__name__, template_folder='templates')
@@ -125,6 +126,91 @@ def text_to_sql_api():
                 return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify(state)
+
+# New endpoints for chat with documents
+@app.route('/api/upload-document', methods=['POST'])
+def upload_document_api():
+    try:
+        if 'document' not in request.files:
+            return jsonify({'error': 'No document provided'}), 400
+        
+        file = request.files['document']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        allowed_extensions = {'pdf', 'txt', 'docx'}
+        file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
+            return jsonify({'error': f'File type not supported. Please upload {", ".join(allowed_extensions)} files'}), 400
+        
+        upload_dir = Path(__file__).parent / 'uploads'
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = upload_dir / file.filename
+        file.save(file_path)
+        
+        result = load_document(str(file_path))
+        
+        if not result['success']:
+            # If loading failed, clean up the file
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return jsonify({'error': result.get('error', 'Unknown error occurred while processing document')}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': 'Document uploaded and processed successfully',
+            'document_name': file.filename
+        })
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chat-with-document', methods=['POST'])
+def chat_with_document_api():
+    try:
+        data = request.get_json()
+        
+        if not data or 'question' not in data:
+            return jsonify({'error': 'Missing required parameter: question'}), 400
+        
+        question = data['question']
+        model_name = data.get('model', 'deepseek')
+        
+        raw_answer = chat_with_document(question, model_name)
+        
+        return jsonify({
+            'question': question,
+            'answer': markdown.markdown(raw_answer),
+            'model_used': get_model_display_name(model_name)
+        })
+    
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/clear-documents', methods=['POST'])
+def clear_documents_api():
+    try:
+        result = clear_documents()
+        
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Unknown error')}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': 'Documents cleared successfully'
+        })
+    
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
