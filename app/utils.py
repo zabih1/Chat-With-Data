@@ -48,7 +48,7 @@ def setup_vector_database(docs):
     )
     base_dir = Path(__file__).parent.parent
 
-    persist_directory = os.path.join(base_dir, "data", "chroma_db")
+    persist_directory = os.path.join(base_dir, "./chroma_db_document")
     os.makedirs(persist_directory, exist_ok=True)
 
     vector_db = Chroma.from_documents(

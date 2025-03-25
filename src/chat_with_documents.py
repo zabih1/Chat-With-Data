@@ -47,8 +47,6 @@ def load_document(file_path):
             'vector_db': vector_db
         }
 
-     
-
 def create_rag_chain_with_documents(model_name='llama'):
     prompt = ChatPromptTemplate.from_template(chat_with_document_template)
     
@@ -80,13 +78,6 @@ def create_rag_chain_with_documents(model_name='llama'):
 
 def load_vector_database():
 
-    base_dir = Path(__file__).parent.parent
-    persist_directory = os.path.join(base_dir, "data", "chroma_db")
-    
-    # Check if the directory exists
-    if not os.path.exists(persist_directory):
-        os.makedirs(persist_directory, exist_ok=True)
-        return None
     
     embeddings = GoogleGenerativeAIEmbeddings(
         google_api_key=gemini_api_key, 
@@ -95,7 +86,7 @@ def load_vector_database():
     
     try:
         vector_db = Chroma(
-            persist_directory=persist_directory,
+            persist_directory="./chroma_db_document",
             embedding_function=embeddings
         )
         

@@ -9,7 +9,8 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader
-
+from langchain_chroma import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,9 +19,23 @@ from app.prompt import chat_with_website_template
 from app.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
 from config import gemini_api_key
 
-# Global in-memory vector database for website data
-website_vector_db = None
-current_website_url = None
+
+def setup_vector_database_website(docs):
+    embeddings = GoogleGenerativeAIEmbeddings(
+        google_api_key=gemini_api_key, 
+        model="models/embedding-001"
+    )
+    base_dir = Path(__file__).parent.parent
+
+    persist_directory = os.path.join(base_dir, "./chroma_db_website")
+    os.makedirs(persist_directory, exist_ok=True)
+
+    vector_db = Chroma.from_documents(
+        documents=docs, 
+        embedding=embeddings, 
+        persist_directory=persist_directory
+    )
+    return vector_db
 
 def scrape_website_content(website_url):
 
@@ -77,8 +92,7 @@ def scrape_website_content(website_url):
 
 
 def prepare_website_data(website_url):
-    global website_vector_db, current_website_url
-    
+
     try:
         documents = scrape_website_content(website_url)
         if not documents:
@@ -86,14 +100,13 @@ def prepare_website_data(website_url):
         
         chunks = split_content(documents)
         
-        # Create in-memory vector database
-        website_vector_db = setup_vector_database(chunks)
-        current_website_url = website_url
+        vector_db = setup_vector_database_website(chunks)
         
         return {
             'success': True,
             'message': 'Website content prepared successfully',
             'website_url': website_url,
+            'vector_db': vector_db,
             'chunks': chunks
         }
     
@@ -103,15 +116,17 @@ def prepare_website_data(website_url):
         return {'success': False, 'error': str(e)}
 
 
-def create_rag_chain_with_prepared_data(model_name='llama'):
-    global website_vector_db
-    
+def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
+
     prompt = ChatPromptTemplate.from_template(chat_with_website_template)
     
-    if not website_vector_db:
-        raise ValueError("No website data has been prepared")
+    vector_db = session_data.get('vector_db')
     
-    retriever = website_vector_db.as_retriever(search_kwargs={"k": 5})
+    if not vector_db and 'chunks' in session_data:
+        vector_db = setup_vector_database_website(session_data['chunks'])
+        session_data['vector_db'] = vector_db
+    
+    retriever = vector_db.as_retriever(search_kwargs={"k": 5})
     
     if model_name == 'gemini':
         llm = gemini_model()
@@ -133,22 +148,30 @@ def create_rag_chain_with_prepared_data(model_name='llama'):
 
 
 def load_vector_database():
-    global website_vector_db
-    return website_vector_db
+    base_dir = Path(__file__).parent.parent
+    persist_directory = os.path.join(base_dir, "./chroma_db_website")
+    
+    # Initialize embeddings
+    embeddings = GoogleGenerativeAIEmbeddings(
+        google_api_key=gemini_api_key, 
+        model="models/embedding-001"
+    )
+    
+    # Load the existing vector database
+    vector_db = Chroma(
+        persist_directory=persist_directory,
+        embedding_function=embeddings
+    )
+    
+    return vector_db
 
 
 def chat_with_website(website_url, question, model_name='deepseek'):
-    global website_vector_db, current_website_url
-    
     try:
-        # Check if we need to reload the website (if URL changed)
-        if website_url != current_website_url or website_vector_db is None:
-            result = prepare_website_data(website_url)
-            if not result['success']:
-                return f"Error preparing website data: {result.get('error', 'Unknown error')}"
+        vector_db = load_vector_database()
         
         prompt = ChatPromptTemplate.from_template(chat_with_website_template)
-        retriever = website_vector_db.as_retriever(search_kwargs={"k": 5})
+        retriever = vector_db.as_retriever(search_kwargs={"k": 5})
         
         if model_name == 'gemini':
             llm = gemini_model()
