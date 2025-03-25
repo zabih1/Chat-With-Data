@@ -139,8 +139,10 @@ def upload_document_api():
         
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-                
+        
+        
     
+        
         upload_dir = Path(__file__).parent / 'uploads'
         os.makedirs(upload_dir, exist_ok=True)
         
@@ -150,7 +152,6 @@ def upload_document_api():
         result = load_document(str(file_path))
         
         if not result['success']:
-            # If loading failed, clean up the file
             if os.path.exists(file_path):
                 os.remove(file_path)
             return jsonify({'error': result.get('error', 'Unknown error occurred while processing document')}), 500
