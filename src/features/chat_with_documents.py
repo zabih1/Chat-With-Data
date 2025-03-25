@@ -8,35 +8,33 @@ from pathlib import Path
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
-
 
 from llama_cloud_services import LlamaParse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.utils import setup_vector_database, split_content
-from src.prompt import chat_with_document_template
-from src.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
-from config import gemini_api_key, llama_parser_api
-
-
-
-
-
+# Import from core modules
+from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
+from src.core.llm import get_llm
+from src.data.vector_store import split_content, setup_vector_database, load_vector_database
+from config import LLAMA_PARSER_API
 
 def load_document(file_path):
-
-        parsed_documents = LlamaParse(api_key=llama_parser_api, 
-                            premium_mode = True,
-                            result_type="markdown").load_data(file_path)
+    """Load and process a document file."""
+    try:
+        # Parse document with LlamaParse
+        parsed_documents = LlamaParse(
+            api_key=LLAMA_PARSER_API, 
+            premium_mode=True,
+            result_type="markdown"
+        ).load_data(file_path)
         
+        # Convert to LangChain document format
         documents = [Document(page_content=doc.text) for doc in parsed_documents]
         
+        # Split into chunks and create vector database
         chunks = split_content(documents)
-        
         vector_db = setup_vector_database(chunks)
         
         return {
@@ -46,79 +44,31 @@ def load_document(file_path):
             'chunks': chunks,
             'vector_db': vector_db
         }
-
-def create_rag_chain_with_documents(model_name='llama'):
-    prompt = ChatPromptTemplate.from_template(chat_with_document_template)
-    
-    vector_db = load_vector_database()
-    
-    if not vector_db:
-        raise ValueError("Vector database could not be loaded")
-    
-    retriever = vector_db.as_retriever(search_kwargs={"k": 5})
-    
-    if model_name == 'gemini':
-        llm = gemini_model()
-    elif model_name == 'mistral':
-        llm = mistral_model()
-    elif model_name == 'deepseek':
-        llm = deepseek_r1_model()
-    else:
-        llm = llama_model()
-    
-    rag_chain = (
-        {"context": retriever, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-    
-    return rag_chain
-
-
-def load_vector_database():
-
-    
-    embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=gemini_api_key, 
-        model="models/embedding-001"
-    )
-    
-    try:
-        vector_db = Chroma(
-            persist_directory="./chroma_db_document",
-            embedding_function=embeddings
-        )
-        
-        if len(vector_db.get()['ids']) == 0:
-            return None
-        
-        return vector_db
     except Exception as e:
-        print(f"Error loading vector database: {e}")
-        return None
-
+        import traceback
+        print(traceback.format_exc())
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def chat_with_document(question, model_name='deepseek'):
-
+    """Process a question against loaded documents."""
     try:
+        # Load the vector database
         vector_db = load_vector_database()
         
         if not vector_db:
             return "No documents have been uploaded yet. Please upload a document first."
         
-        prompt = ChatPromptTemplate.from_template(chat_with_document_template)
+        # Create prompt and retriever
+        prompt = ChatPromptTemplate.from_template(DOCUMENT_CHAT_TEMPLATE)
         retriever = vector_db.as_retriever(search_kwargs={"k": 5})
         
-        if model_name == 'gemini':
-            llm = gemini_model()
-        elif model_name == 'mistral':
-            llm = mistral_model()
-        elif model_name == 'deepseek':
-            llm = deepseek_r1_model()
-        else:
-            llm = llama_model()
+        # Get the specified LLM
+        llm = get_llm(model_name)
         
+        # Create and execute the RAG chain
         rag_chain = (
             {"context": retriever, "question": RunnablePassthrough()}
             | prompt
@@ -127,7 +77,6 @@ def chat_with_document(question, model_name='deepseek'):
         )
         
         raw_answer = rag_chain.invoke(question)
-        
         return raw_answer
     
     except Exception as e:
@@ -135,19 +84,19 @@ def chat_with_document(question, model_name='deepseek'):
         print(traceback.format_exc())
         raise Exception(f"Error in chat_with_document: {str(e)}")
 
-
 def clear_documents():
-
+    """Clear all uploaded documents and vector database."""
     try:
-        base_dir = Path(__file__).parent.parent
-        persist_directory = os.path.join(base_dir, "data", "chroma_db")
+        base_dir = Path(__file__).parent.parent.parent
+        persist_directory = os.path.join(base_dir, "data", "chroma_db_document")
         
+        # Remove and recreate vector database directory
         if os.path.exists(persist_directory):
             shutil.rmtree(persist_directory)
         
         os.makedirs(persist_directory, exist_ok=True)
         
-        # Also clear the uploads directory
+        # Clear uploads directory
         uploads_dir = os.path.join(base_dir, "uploads")
         if os.path.exists(uploads_dir):
             for file in os.listdir(uploads_dir):

@@ -10,16 +10,12 @@ from typing_extensions import TypedDict, Annotated
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.prompt import text_to_sql_templates
-from src.llm import gemini_model, mistral_model, deepseek_r1_model, llama_model
+from src.core.prompts import TEXT_TO_SQL_TEMPLATE
+from src.core.llm import get_llm
 
-# Initialize models
-llm1 = gemini_model()
-llm2 = mistral_model()
-llm3 = deepseek_r1_model()
-llm4 = llama_model()
 
-query_prompt_template = PromptTemplate.from_template(text_to_sql_templates)
+
+query_prompt_template = PromptTemplate.from_template(TEXT_TO_SQL_TEMPLATE)
 
 class State(TypedDict):
     question: str
@@ -49,7 +45,10 @@ def write_query(state: State) -> dict:
         "table_info": db.get_table_info(),
         "input": state["question"],
             })
-        structured_llm = llm3.with_structured_output(QueryOutput)
+        
+        llm = get_llm("deepseek")
+
+        structured_llm = llm.with_structured_output(QueryOutput)
         result = structured_llm.invoke(prompt)
         return {"query": result["query"]}
         
@@ -89,7 +88,9 @@ def generate_answer(state: State) -> dict:
       
         )
 
-        response = llm4.invoke(prompt)
+        llm = get_llm("gemini")
+
+        response = llm.invoke(prompt)
         response_content = response.content if hasattr(response, "content") else str(response)
         html_content = markdown.markdown(response_content)
         return {"answer": html_content}

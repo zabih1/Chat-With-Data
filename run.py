@@ -6,12 +6,12 @@ from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.youtube_video_summary import extract_video_id, generate_summary
-from src.chat_with_website import prepare_website_data, chat_with_website
-from src.text_to_sql import write_query, execute_query, generate_answer
-from src.chat_with_documents import chat_with_document, load_document, clear_documents
-from src.utils import MODELS, get_model_display_name
-from config import db_uri
+from src.features.youtube_video_summary import extract_video_id, generate_summary
+from src.features.chat_with_website import prepare_website_data, chat_with_website
+from src.features.text_to_sql import write_query, execute_query, generate_answer
+from src.features.chat_with_documents import chat_with_document, load_document, clear_documents
+from src.core.utils import MODELS, get_model_display_name
+from config import DATABASE_URI
 
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.urandom(24)  
@@ -107,7 +107,7 @@ def chat_with_website_api():
 
 @app.route("/api/text_to_sql", methods=["POST"])
 def text_to_sql_api():
-    state = {"question": "", "query": "", "result": "", "answer": "", "db_uri": db_uri}
+    state = {"question": "", "query": "", "result": "", "answer": "", "db_uri": DATABASE_URI}
 
     if request.method == "POST":
         state["question"] = request.form.get("question", "").strip()

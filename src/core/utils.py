@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import gemini_api_key
+from config import GEMINI_API_KEY
 
 
 MODELS = [
@@ -43,7 +43,7 @@ def split_content(documents, chunk_size=1000, chunk_overlap=200):
 # >>>>>>>>>> 📌 Setup vector database. <<<<<<<<<<<<<<<<<<<<<<
 def setup_vector_database(docs):
     embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=gemini_api_key, 
+        google_api_key=GEMINI_API_KEY, 
         model="models/embedding-001"
     )
     base_dir = Path(__file__).parent.parent

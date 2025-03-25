@@ -14,15 +14,16 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.utils import setup_vector_database, split_content
-from src.prompt import chat_with_website_template
-from src.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
-from config import gemini_api_key
+from src.data.vector_store import split_content, setup_vector_database, load_vector_database
+
+from src.core.prompts import WEBSITE_CHAT_TEMPLATE
+from src.core.llm import get_llm
+from config import GEMINI_API_KEY
 
 
 def setup_vector_database_website(docs):
     embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=gemini_api_key, 
+        google_api_key=GEMINI_API_KEY, 
         model="models/embedding-001"
     )
     base_dir = Path(__file__).parent.parent
@@ -118,7 +119,7 @@ def prepare_website_data(website_url):
 
 def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
 
-    prompt = ChatPromptTemplate.from_template(chat_with_website_template)
+    prompt = ChatPromptTemplate.from_template(WEBSITE_CHAT_TEMPLATE)
     
     vector_db = session_data.get('vector_db')
     
@@ -127,15 +128,7 @@ def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
         session_data['vector_db'] = vector_db
     
     retriever = vector_db.as_retriever(search_kwargs={"k": 5})
-    
-    if model_name == 'gemini':
-        llm = gemini_model()
-    elif model_name == 'mistral':
-        llm = mistral_model()
-    elif model_name == 'deepseek':
-        llm = deepseek_r1_model()
-    else:
-        llm = llama_model()
+    llm = get_llm(model_name)
     
     rag_chain = (
         {"context": retriever, "question": RunnablePassthrough()}
@@ -153,7 +146,7 @@ def load_vector_database():
     
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=gemini_api_key, 
+        google_api_key=GEMINI_API_KEY, 
         model="models/embedding-001"
     )
     
@@ -170,18 +163,11 @@ def chat_with_website(website_url, question, model_name='deepseek'):
     try:
         vector_db = load_vector_database()
         
-        prompt = ChatPromptTemplate.from_template(chat_with_website_template)
+        prompt = ChatPromptTemplate.from_template(WEBSITE_CHAT_TEMPLATE)
         retriever = vector_db.as_retriever(search_kwargs={"k": 5})
-        
-        if model_name == 'gemini':
-            llm = gemini_model()
-        elif model_name == 'mistral':
-            llm = mistral_model()
-        elif model_name == 'deepseek':
-            llm = deepseek_r1_model()
-        else:
-            llm = llama_model()
-        
+
+        llm = get_llm(model_name)
+
         rag_chain = (
             {"context": retriever, "question": RunnablePassthrough()}
             | prompt

@@ -1,15 +1,32 @@
-
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-groq_api_key = os.getenv("GROQ_API_KEY")
+# API Keys
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY")
+WEAVIATE_URL = os.getenv("WEAVIATE_URL")
+LLAMA_PARSER_API = os.getenv("LLAMA_PARSER_API")
 
-weaviate_api_key = os.getenv("WEAVIATE_API_KEY")
-weaviate_url = os.getenv("WEAVIATE_URL")
+# Database Config
+DATABASE_URI = os.getenv("DATABASE_URI")
 
+# Application Settings
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+PORT = int(os.getenv("PORT", 5000))
+HOST = os.getenv("HOST", "0.0.0.0")
 
-db_uri = os.getenv("DATABASE_URI")
-llama_parser_api = os.getenv("LLAMA_PARSER_API")
+# Model Settings
+AVAILABLE_MODELS = [
+    {"id": "llama", "name": "Llama 3"},
+    {"id": "gemini", "name": "Gemini"},
+    {"id": "mistral", "name": "Mistral"},
+    {"id": "deepseek", "name": "DeepSeek"}
+]
+
+# Vector Database Settings
+CHROMA_PERSIST_DIRECTORY = "./data/chroma_db"
+DOCUMENT_CHUNK_SIZE = 1000
+DOCUMENT_CHUNK_OVERLAP = 200

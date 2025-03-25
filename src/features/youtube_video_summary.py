@@ -6,8 +6,8 @@ import re
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.prompt import youtube_video_summary_template
-from src.llm import llama_model, gemini_model, mistral_model, deepseek_r1_model
+from src.core.prompts import YOUTUBE_SUMMARY_TEMPLATE
+from src.core.llm import get_llm
 
 def get_video_transcript(video_id):
 
@@ -36,17 +36,10 @@ def generate_summary(youtube_url, model_name='llama'):
     video_id = extract_video_id(youtube_url)
     full_transcript = get_video_transcript(video_id)
     
-    prompt_template = PromptTemplate.from_template(youtube_video_summary_template)
+    prompt_template = PromptTemplate.from_template(YOUTUBE_SUMMARY_TEMPLATE)
     prompt = prompt_template.format(full_transcript=full_transcript)
-    
-    if model_name == 'gemini':
-        llm = gemini_model()
-    elif model_name == 'mistral':
-        llm = mistral_model()
-    elif model_name == 'deepseek':
-        llm = deepseek_r1_model()
-    else:
-        llm = llama_model()
+
+    llm = get_llm(model_name)
     
     summary = llm.invoke(prompt)
     return summary.content
