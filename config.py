@@ -18,15 +18,23 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 PORT = int(os.getenv("PORT", 5000))
 HOST = os.getenv("HOST", "0.0.0.0")
 
+
+# Vector Database Settings
+CHROMA_PERSIST_DIRECTORY = "./data/chroma_db"
+DOCUMENT_CHUNK_SIZE = 1000
+DOCUMENT_CHUNK_OVERLAP = 200
+
+
 # Model Settings
-AVAILABLE_MODELS = [
+MODELS = [
     {"id": "llama", "name": "Llama 3"},
     {"id": "gemini", "name": "Gemini"},
     {"id": "mistral", "name": "Mistral"},
     {"id": "deepseek", "name": "DeepSeek"}
 ]
 
-# Vector Database Settings
-CHROMA_PERSIST_DIRECTORY = "./data/chroma_db"
-DOCUMENT_CHUNK_SIZE = 1000
-DOCUMENT_CHUNK_OVERLAP = 200
+def get_model_display_name(model_id):
+    for model in MODELS:
+        if model["id"] == model_id:
+            return model["name"]
+    return model_id  

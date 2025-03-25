@@ -17,13 +17,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import from core modules
 from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
 from src.core.llm import get_llm
-from src.data.vector_store import split_content, setup_vector_database, load_vector_database
+from src.core.vector_store import split_content, setup_vector_database, load_vector_database
 from config import LLAMA_PARSER_API
 
 def load_document(file_path):
     """Load and process a document file."""
     try:
-        # Parse document with LlamaParse
         parsed_documents = LlamaParse(
             api_key=LLAMA_PARSER_API, 
             premium_mode=True,

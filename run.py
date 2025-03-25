@@ -48,7 +48,6 @@ def youtube_summary_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/prepare-website', methods=['POST'])
 def prepare_website_api():
     try:
@@ -75,10 +74,7 @@ def prepare_website_api():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/chat-with-website', methods=['POST'])
-
-
 def chat_with_website_api():
     try:
         data = request.get_json()
@@ -103,7 +99,6 @@ def chat_with_website_api():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
-
 
 @app.route("/api/text_to_sql", methods=["POST"])
 def text_to_sql_api():

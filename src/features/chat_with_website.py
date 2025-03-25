@@ -9,34 +9,15 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader
-from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.data.vector_store import split_content, setup_vector_database, load_vector_database
+from src.core.vector_store import split_content, setup_vector_database, load_vector_database
 
 from src.core.prompts import WEBSITE_CHAT_TEMPLATE
 from src.core.llm import get_llm
-from config import GEMINI_API_KEY
 
-
-def setup_vector_database_website(docs):
-    embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=GEMINI_API_KEY, 
-        model="models/embedding-001"
-    )
-    base_dir = Path(__file__).parent.parent
-
-    persist_directory = os.path.join(base_dir, "./chroma_db_website")
-    os.makedirs(persist_directory, exist_ok=True)
-
-    vector_db = Chroma.from_documents(
-        documents=docs, 
-        embedding=embeddings, 
-        persist_directory=persist_directory
-    )
-    return vector_db
 
 def scrape_website_content(website_url):
 
@@ -101,7 +82,7 @@ def prepare_website_data(website_url):
         
         chunks = split_content(documents)
         
-        vector_db = setup_vector_database_website(chunks)
+        vector_db = setup_vector_database(chunks, db_type="website")
         
         return {
             'success': True,
@@ -124,7 +105,7 @@ def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
     vector_db = session_data.get('vector_db')
     
     if not vector_db and 'chunks' in session_data:
-        vector_db = setup_vector_database_website(session_data['chunks'])
+        vector_db = setup_vector_database(session_data['chunks'], db_type="website")
         session_data['vector_db'] = vector_db
     
     retriever = vector_db.as_retriever(search_kwargs={"k": 5})
@@ -139,29 +120,9 @@ def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
     
     return rag_chain
 
-
-def load_vector_database():
-    base_dir = Path(__file__).parent.parent
-    persist_directory = os.path.join(base_dir, "./chroma_db_website")
-    
-    # Initialize embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=GEMINI_API_KEY, 
-        model="models/embedding-001"
-    )
-    
-    # Load the existing vector database
-    vector_db = Chroma(
-        persist_directory=persist_directory,
-        embedding_function=embeddings
-    )
-    
-    return vector_db
-
-
 def chat_with_website(website_url, question, model_name='deepseek'):
     try:
-        vector_db = load_vector_database()
+        vector_db = load_vector_database(db_type="website")
         
         prompt = ChatPromptTemplate.from_template(WEBSITE_CHAT_TEMPLATE)
         retriever = vector_db.as_retriever(search_kwargs={"k": 5})
