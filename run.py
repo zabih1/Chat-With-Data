@@ -10,7 +10,7 @@ from src.youtube_video_summary import extract_video_id, generate_summary
 from src.chat_with_website import prepare_website_data, chat_with_website
 from src.text_to_sql import write_query, execute_query, generate_answer
 from src.chat_with_documents import chat_with_document, load_document, clear_documents
-from app.utils import MODELS, get_model_display_name
+from src.utils import MODELS, get_model_display_name
 from config import db_uri
 
 app = Flask(__name__, template_folder='templates')

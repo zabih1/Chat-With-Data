@@ -10,8 +10,8 @@ from typing_extensions import TypedDict, Annotated
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.prompt import text_to_sql_templates
-from app.llm import gemini_model, mistral_model, deepseek_r1_model, llama_model
+from src.prompt import text_to_sql_templates
+from src.llm import gemini_model, mistral_model, deepseek_r1_model, llama_model
 
 # Initialize models
 llm1 = gemini_model()

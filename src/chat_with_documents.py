@@ -17,9 +17,9 @@ from llama_cloud_services import LlamaParse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.utils import setup_vector_database, split_content
-from app.prompt import chat_with_document_template
-from app.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
+from src.utils import setup_vector_database, split_content
+from src.prompt import chat_with_document_template
+from src.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
 from config import gemini_api_key, llama_parser_api
 
 
