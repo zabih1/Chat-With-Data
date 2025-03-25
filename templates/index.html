@@ -414,7 +414,7 @@
                                                 <div class="upload-zone p-3 text-center mb-3" id="dropZone">
                                                     <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-primary"></i>
                                                     <p class="mb-1">Drop your file here or click to browse</p>
-                                                    <p class="small text-muted mb-0">PDF, TXT, DOCX (Max 10MB)</p>
+                                                    <p class="small text-muted mb-0">PDF, TXT, DOCX, PNG etc</p>
                                                     <input type="file" id="documentFile" name="document" class="d-none">
                                                 </div>
                                                 <button type="submit" class="btn btn-primary w-100" id="uploadDocBtn">
@@ -978,21 +978,8 @@
             
             const file = fileInput.files[0];
             
-            // Validate file size (10MB max)
-            if (file.size > 10 * 1024 * 1024) {
-              utils.updateStatus('documentStatus', 'File size exceeds 10MB limit', false);
-              return;
-            }
-            
-            // Check file extension
-            const allowedExtensions = ['pdf', 'txt', 'docx'];
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-            
-            if (!allowedExtensions.includes(fileExtension)) {
-              utils.updateStatus('documentStatus', 'Only PDF, TXT, and DOCX files are supported', false);
-              return;
-            }
-            
+
+      
             // Show loading state
             const uploadBtn = document.getElementById('uploadDocBtn');
             const originalBtnHTML = uploadBtn.innerHTML;
