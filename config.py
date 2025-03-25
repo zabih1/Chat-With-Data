@@ -12,5 +12,4 @@ weaviate_url = os.getenv("WEAVIATE_URL")
 
 
 db_uri = os.getenv("DATABASE_URI")
-
-
+llama_parser_api = os.getenv("LLAMA_PARSER_API")

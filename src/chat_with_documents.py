@@ -8,44 +8,32 @@ from pathlib import Path
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_community.document_loaders import TextLoader
-from langchain_community.document_loaders import UnstructuredWordDocumentLoader
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.documents import Document
+
+
+from llama_cloud_services import LlamaParse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.utils import setup_vector_database, split_content
 from app.prompt import chat_with_document_template
 from app.llm import deepseek_r1_model, llama_model, gemini_model, mistral_model
-from config import gemini_api_key
+from config import gemini_api_key, llama_parser_api
+
+
+
+
 
 
 def load_document(file_path):
 
-    try:
-        file_extension = file_path.split('.')[-1].lower()
+        parsed_documents = LlamaParse(api_key=llama_parser_api, 
+                            premium_mode = True,
+                            result_type="markdown").load_data(file_path)
         
-        if file_extension == 'pdf':
-            loader = PyMuPDFLoader(file_path)
-        elif file_extension == 'txt':
-            loader = TextLoader(file_path)
-        elif file_extension == 'docx':
-            loader = UnstructuredWordDocumentLoader(file_path)
-        else:
-            return {
-                'success': False,
-                'error': f'Unsupported file type: {file_extension}'
-            }
-        
-        documents = loader.load()
-        
-        if not documents:
-            return {
-                'success': False,
-                'error': 'No content could be extracted from the document'
-            }
+        documents = [Document(page_content=doc.text) for doc in parsed_documents]
         
         chunks = split_content(documents)
         
@@ -58,15 +46,8 @@ def load_document(file_path):
             'chunks': chunks,
             'vector_db': vector_db
         }
-    
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return {
-            'success': False,
-            'error': str(e)
-        }
 
+     
 
 def create_rag_chain_with_documents(model_name='llama'):
     prompt = ChatPromptTemplate.from_template(chat_with_document_template)

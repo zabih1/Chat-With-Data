@@ -18,7 +18,7 @@ app.secret_key = os.urandom(24)
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index1.html', models=MODELS)
+    return render_template('index.html', models=MODELS)
 
 @app.route('/api/youtube-summary', methods=['POST'])
 def youtube_summary_api():
@@ -77,6 +77,8 @@ def prepare_website_api():
 
 
 @app.route('/api/chat-with-website', methods=['POST'])
+
+
 def chat_with_website_api():
     try:
         data = request.get_json()
@@ -127,7 +129,6 @@ def text_to_sql_api():
 
     return jsonify(state)
 
-# New endpoints for chat with documents
 @app.route('/api/upload-document', methods=['POST'])
 def upload_document_api():
     try:
