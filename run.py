@@ -139,13 +139,8 @@ def upload_document_api():
         
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
-        allowed_extensions = {'pdf', 'txt', 'docx'}
-        file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-        
-        if file_extension not in allowed_extensions:
-            return jsonify({'error': f'File type not supported. Please upload {", ".join(allowed_extensions)} files'}), 400
-        
+                
+    
         upload_dir = Path(__file__).parent / 'uploads'
         os.makedirs(upload_dir, exist_ok=True)
         
