@@ -62,9 +62,8 @@ def chat_with_document(question, model_name='deepseek'):
         
         # Create prompt and retriever
         prompt = ChatPromptTemplate.from_template(DOCUMENT_CHAT_TEMPLATE)
-        retriever = vector_db.as_retriever(search_kwargs={"k": 5})
+        retriever = vector_db.as_retriever(search_kwargs={"k": 4})
         
-        # Get the specified LLM
         llm = get_llm(model_name)
         
         # Create and execute the RAG chain
