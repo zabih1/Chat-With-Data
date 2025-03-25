@@ -507,371 +507,400 @@
     <!-- Custom JS -->
     <script>
 
-        // Define models
-    const MODELS = [
-    {"id": "llama", "name": "Llama 3"},
-    {"id": "gemini", "name": "Gemini"},
-    {"id": "mistral", "name": "Mistral"},
-    {"id": "deepseek", "name": "DeepSeek"}
-    ];
+        // Main initialization function
+document.addEventListener('DOMContentLoaded', function() {
 
-    // Global variables for state management
-    let currentWebsiteUrl = '';
-    let recentWebsites = [];
-    let recentVideos = [];
+    const MODELS = {{ models|tojson|safe }};
 
-    // Helper function to update recent items lists
-    function updateRecentList(containerClass, items, clickCallback) {
-    const container = document.querySelector(`.${containerClass}`);
-    if (!container) return;
-
-    if (items.length === 0) {
-        container.innerHTML = '<p class="text-muted small">No recent items</p>';
-        return;
-    }
-
-    let html = '';
-    items.forEach(item => {
-        // Get domain name for better display
-        let displayText;
-        try {
-            const url = new URL(item);
-            if (url.hostname.includes('youtube')) {
-                displayText = 'YouTube Video';
-            } else {
-                displayText = url.hostname.replace('www.', '');
-            }
-        } catch {
-            // Fallback if URL parsing fails
-            displayText = item.length > 30 ? item.substring(0, 27) + '...' : item;
+    
+    // Global state
+    const state = {
+      currentWebsiteUrl: '',
+      recentWebsites: [],
+      recentVideos: [],
+      uploadedDocuments: []
+    };
+    
+    // Utility functions
+    const utils = {
+      // Show loading state on a button
+      setLoading: (btn, isLoading, originalText = null) => {
+        if (isLoading) {
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+          btn.disabled = true;
+        } else {
+          btn.innerHTML = originalText || btn.dataset.originalText;
+          btn.disabled = false;
+        }
+      },
+      
+      // Update status message
+      updateStatus: (elementId, message, isSuccess = true) => {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.className = `small ${isSuccess ? 'text-success' : 'text-danger'} mt-2`;
+      },
+      
+      // Add message to chat container
+      addChatMessage: (container, message, isUser = false) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = isUser ? 'user-message' : 'bot-message';
+        
+        if (typeof message === 'string') {
+          if (isUser) {
+            messageDiv.textContent = message;
+          } else {
+            messageDiv.innerHTML = message;
+          }
+        } else {
+          messageDiv.innerHTML = message;
         }
         
-        html += `<a href="#" class="list-group-item list-group-item-action small py-2" title="${item}">${displayText}</a>`;
-    });
-
-    container.innerHTML = html;
-
-    // Add click event listeners
-    container.querySelectorAll('a').forEach((link, index) => {
-        link.addEventListener('click', (e) => {
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+        return messageDiv;
+      },
+      
+      // Update recent items list
+      updateRecentList: (containerClass, items, clickCallback) => {
+        const container = document.querySelector(`.${containerClass}`);
+        if (!container) return;
+        
+        if (items.length === 0) {
+          container.innerHTML = '<p class="text-muted small">No recent items</p>';
+          return;
+        }
+        
+        container.innerHTML = items.map(item => {
+          // Get display text based on URL
+          let displayText;
+          try {
+            const url = new URL(item);
+            displayText = url.hostname.includes('youtube') ? 'YouTube Video' : url.hostname.replace('www.', '');
+          } catch {
+            displayText = item.length > 30 ? item.substring(0, 27) + '...' : item;
+          }
+          
+          return `<a href="#" class="list-group-item list-group-item-action small py-2" title="${item}">${displayText}</a>`;
+        }).join('');
+        
+        // Add click event listeners
+        container.querySelectorAll('a').forEach((link, index) => {
+          link.addEventListener('click', (e) => {
             e.preventDefault();
             clickCallback(items[index]);
+          });
         });
-    });
-    }
-
-    // Populate model dropdowns
-    function populateModels() {
-    const webModelSelect = document.getElementById('webAiModel');
-    const ytModelSelect = document.getElementById('ytAiModel');
-
-    // Clear existing options
-    webModelSelect.innerHTML = '';
-    ytModelSelect.innerHTML = '';
-
-    // Add options from MODELS array
-    MODELS.forEach(model => {
-        // For website chat dropdown
-        const webOption = document.createElement('option');
-        webOption.value = model.id;
-        webOption.textContent = model.name;
-        if (model.id === 'deepseek') webOption.selected = true;
-        webModelSelect.appendChild(webOption);
+      }
+    };
+    
+    // Initialize all model dropdowns
+    const initModelDropdowns = () => {
+      ['webAiModel', 'ytAiModel', 'docAiModel'].forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
         
-        // For YouTube summarizer dropdown
-        const ytOption = document.createElement('option');
-        ytOption.value = model.id;
-        ytOption.textContent = model.name;
-        if (model.id === 'llama') ytOption.selected = true;
-        ytModelSelect.appendChild(ytOption);
-    });
-    }
-
-    // Initialize website URL form handling
-    function initWebsiteUrlForm() {
-    document.getElementById('websiteUrlForm').addEventListener('submit', function(e) {
+        select.innerHTML = '';
+        
+        MODELS.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.id;
+          option.textContent = model.name;
+          
+          // Set default selection based on dropdown
+          if ((selectId === 'webAiModel' || selectId === 'docAiModel') && model.id === 'deepseek') {
+            option.selected = true;
+          } else if (selectId === 'ytAiModel' && model.id === 'llama') {
+            option.selected = true;
+          }
+          
+          select.appendChild(option);
+        });
+      });
+    };
+    
+    // Initialize website chat functionality
+    const initWebsiteChat = () => {
+      // Website URL form
+      const urlForm = document.getElementById('websiteUrlForm');
+      if (!urlForm) return;
+      
+      urlForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const urlInput = document.getElementById('websiteUrl');
         const url = urlInput.value.trim();
+        const submitBtn = document.getElementById('websiteSubmitBtn');
         
         if (!url) return;
         
-        // Validate URL
-        try {
-            new URL(url);
-        } catch (_) {
-            document.getElementById('websiteStatus').textContent = 'Please enter a valid URL';
-            document.getElementById('websiteStatus').className = 'small text-danger mt-2';
-            return;
+        // Basic URL validation
+        try { new URL(url); } catch (_) {
+          utils.updateStatus('websiteStatus', 'Please enter a valid URL', false);
+          return;
         }
         
         // Show loading state
-        const submitBtn = document.getElementById('websiteSubmitBtn');
         const originalBtnHTML = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        submitBtn.disabled = true;
-        document.getElementById('websiteStatus').textContent = 'Loading and indexing website content...';
-        document.getElementById('websiteStatus').className = 'small text-muted mt-2';
+        utils.setLoading(submitBtn, true);
+        utils.updateStatus('websiteStatus', 'Loading and indexing website content...', true);
         
-        // Call the prepare-website API to scrape and index the website
-        fetch('/api/prepare-website', {
+        try {
+          const response = await fetch('/api/prepare-website', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                website_url: url
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Reset submit button
-            submitBtn.innerHTML = originalBtnHTML;
-            submitBtn.disabled = false;
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ website_url: url })
+          });
+          
+          const data = await response.json();
+          utils.setLoading(submitBtn, false, originalBtnHTML);
+          
+          if (data.success) {
+            utils.updateStatus('websiteStatus', 'Website content loaded and indexed successfully!', true);
             
-            if (data.success) {
-                document.getElementById('websiteStatus').textContent = 'Website content loaded and indexed successfully!';
-                document.getElementById('websiteStatus').className = 'small text-success mt-2';
-                
-                // Store the current website URL
-                currentWebsiteUrl = url;
-                
-                // Add to recent websites if not already there
-                if (!recentWebsites.includes(url)) {
-                    recentWebsites.unshift(url);
-                    if (recentWebsites.length > 5) recentWebsites.pop(); // Keep only 5 recent items
-                    
-                    // Update recent websites list
-                    updateRecentList('recent-websites', recentWebsites, (url) => {
-                        document.getElementById('websiteUrl').value = url;
-                        document.getElementById('websiteUrlForm').dispatchEvent(new Event('submit'));
-                    });
-                }
-                
-                // Store the website URL
-                document.getElementById('currentWebsite').textContent = url;
-                
-                // Enable chat interface
-                document.getElementById('webMessageInput').disabled = false;
-                document.getElementById('webChatForm').querySelector('button').disabled = false;
-                
-                // Clear the chat container
-                const chatContainer = document.getElementById('webChatContainer');
-                chatContainer.innerHTML = '';
-                
-                // Add welcome message
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'bot-message';
-                botMessageDiv.innerHTML = `
-                    <p class="mb-0">Website content processed and indexed. What would you like to know about this website?</p>
-                `;
-                chatContainer.appendChild(botMessageDiv);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            } else {
-                document.getElementById('websiteStatus').textContent = data.error || 'Unknown error';
-                document.getElementById('websiteStatus').className = 'small text-danger mt-2';
+            // Update state
+            state.currentWebsiteUrl = url;
+            if (!state.recentWebsites.includes(url)) {
+              state.recentWebsites.unshift(url);
+              if (state.recentWebsites.length > 5) state.recentWebsites.pop();
+              utils.updateRecentList('recent-websites', state.recentWebsites, (url) => {
+                document.getElementById('websiteUrl').value = url;
+                urlForm.dispatchEvent(new Event('submit'));
+              });
             }
-        })
-        .catch(error => {
-            submitBtn.innerHTML = originalBtnHTML;
-            submitBtn.disabled = false;
-            document.getElementById('websiteStatus').textContent = 'Error: ' + error.message;
-            document.getElementById('websiteStatus').className = 'small text-danger mt-2';
-        });
-    });
-    }
-
-    // Initialize website chat form handling
-    function initWebsiteChatForm() {
-    document.getElementById('webChatForm').addEventListener('submit', function(e) {
+            
+            // Update UI
+            document.getElementById('currentWebsite').textContent = url;
+            document.getElementById('webMessageInput').disabled = false;
+            document.getElementById('webChatForm').querySelector('button').disabled = false;
+            
+            // Initialize chat with welcome message
+            const chatContainer = document.getElementById('webChatContainer');
+            chatContainer.innerHTML = '';
+            utils.addChatMessage(chatContainer, 
+              '<p class="mb-0">Website content processed and indexed. What would you like to know about this website?</p>'
+            );
+          } else {
+            utils.updateStatus('websiteStatus', data.error || 'Unknown error', false);
+          }
+        } catch (error) {
+          utils.setLoading(submitBtn, false, originalBtnHTML);
+          utils.updateStatus('websiteStatus', 'Error: ' + error.message, false);
+        }
+      });
+      
+      // Website chat form
+      const chatForm = document.getElementById('webChatForm');
+      if (!chatForm) return;
+      
+      chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const messageInput = document.getElementById('webMessageInput');
         const message = messageInput.value.trim();
+        const chatContainer = document.getElementById('webChatContainer');
         
-        if (!message || !currentWebsiteUrl) return;
-        
-        const model = document.getElementById('webAiModel').value;
+        if (!message || !state.currentWebsiteUrl) return;
         
         // Add user message to chat
-        const chatContainer = document.getElementById('webChatContainer');
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'user-message';
-        userMessageDiv.textContent = message;
-        chatContainer.appendChild(userMessageDiv);
-        
-        // Clear input
+        utils.addChatMessage(chatContainer, message, true);
         messageInput.value = '';
         
         // Add loading indicator
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'bot-message';
-        loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...';
-        chatContainer.appendChild(loadingDiv);
+        const loadingDiv = utils.addChatMessage(chatContainer, 
+          '<div class="spinner-border spinner-border-sm text-info" role="status"></div> Thinking...'
+        );
         
-        // Scroll to bottom
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        
-        // Send request to API
-        fetch('/api/chat-with-website', {
+        try {
+          const model = document.getElementById('webAiModel').value;
+          const response = await fetch('/api/chat-with-website', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                website_url: currentWebsiteUrl,
-                question: message,
-                model: model
+              website_url: state.currentWebsiteUrl,
+              question: message,
+              model: model
             })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Remove loading indicator
-            chatContainer.removeChild(loadingDiv);
-            
-            // Add bot response
-            const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'bot-message';
-            botMessageDiv.innerHTML = data.answer;
-            chatContainer.appendChild(botMessageDiv);
-            
-            // Scroll to bottom
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        })
-        .catch(error => {
-            // Remove loading indicator
-            chatContainer.removeChild(loadingDiv);
-            
-            // Add error message
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'bot-message';
-            errorDiv.innerHTML = `<p class="text-danger mb-0">Error: ${error.message}</p>`;
-            chatContainer.appendChild(errorDiv);
-            
-            // Scroll to bottom
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        });
-    });
-    }
-
-    // Initialize YouTube URL form handling
-    function initYoutubeUrlForm() {
-    document.getElementById('youtubeUrlForm').addEventListener('submit', function(e) {
+          });
+          
+          const data = await response.json();
+          chatContainer.removeChild(loadingDiv);
+          utils.addChatMessage(chatContainer, data.answer);
+        } catch (error) {
+          chatContainer.removeChild(loadingDiv);
+          utils.addChatMessage(chatContainer, `<p class="text-danger mb-0">Error: ${error.message}</p>`);
+        }
+      });
+    };
+    
+    // Initialize YouTube summarizer
+    const initYoutubeSummarizer = () => {
+      // YouTube URL form
+      const urlForm = document.getElementById('youtubeUrlForm');
+      if (!urlForm) return;
+      
+      urlForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const urlInput = document.getElementById('youtubeUrl');
         const url = urlInput.value.trim();
         const model = document.getElementById('ytAiModel').value;
+        const submitBtn = document.getElementById('youtubeSubmitBtn');
         
         if (!url) return;
         
-        // Validate YouTube URL
+        // Basic YouTube URL validation
         if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
-            document.getElementById('youtubeStatus').textContent = 'Please enter a valid YouTube URL';
-            document.getElementById('youtubeStatus').className = 'small text-danger mt-2';
-            return;
+          utils.updateStatus('youtubeStatus', 'Please enter a valid YouTube URL', false);
+          return;
         }
         
         // Show loading state
-        const submitBtn = document.getElementById('youtubeSubmitBtn');
         const originalBtnHTML = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        submitBtn.disabled = true;
-        document.getElementById('youtubeStatus').textContent = 'Processing video...';
-        document.getElementById('youtubeStatus').className = 'small text-muted mt-2';
+        utils.setLoading(submitBtn, true);
+        utils.updateStatus('youtubeStatus', 'Processing video...', true);
         
-        // Call API to get video summary
-        fetch('/api/youtube-summary', {
+        try {
+          const response = await fetch('/api/youtube-summary', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                youtube_url: url,
-                model: model,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ youtube_url: url, model: model })
+          });
+          
+          const data = await response.json();
+          utils.setLoading(submitBtn, false, originalBtnHTML);
+          utils.updateStatus('youtubeStatus', 'Video processed successfully', true);
+          
+          // Update recent videos
+          if (!state.recentVideos.includes(url)) {
+            state.recentVideos.unshift(url);
+            if (state.recentVideos.length > 5) state.recentVideos.pop();
+            utils.updateRecentList('recent-videos', state.recentVideos, (url) => {
+              document.getElementById('youtubeUrl').value = url;
+              urlForm.dispatchEvent(new Event('submit'));
+            });
+          }
+          
+          // Update UI with video info and summary
+          document.getElementById('videoInfoContainer').classList.remove('d-none');
+          document.getElementById('videoTitle').textContent = "YouTube Video";
+          document.getElementById('videoChannel').textContent = "YouTube Channel";
+          document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+          document.getElementById('videoThumbnail').innerHTML = `
+            <img src="https://img.youtube.com/vi/${data.video_id}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
+          `;
+          
+          // Display summary
+          const initialMessage = document.getElementById('ytInitialMessage');
+          if (initialMessage) initialMessage.classList.add('d-none');
+          
+          document.getElementById('videoSummaryContainer').innerHTML = `
+            <div class="card">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">Summary</h6>
+              </div>
+              <div class="card-body">
+                ${data.summary}
+              </div>
+            </div>
+          `;
+          
+          // Show actions
+          document.getElementById('summaryActionsForm').classList.remove('d-none');
+        } catch (error) {
+          utils.setLoading(submitBtn, false, originalBtnHTML);
+          utils.updateStatus('youtubeStatus', 'Error: ' + error.message, false);
+        }
+      });
+      
+      // YouTube summary actions
+      if (document.getElementById('copyBtn')) {
+        document.getElementById('copyBtn').addEventListener('click', function() {
+          const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
+          const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
+          
+          navigator.clipboard.writeText(summaryText)
+            .then(() => {
+              this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
+              setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+              }, 2000);
             })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Reset submit button
-            submitBtn.innerHTML = originalBtnHTML;
-            submitBtn.disabled = false;
-            document.getElementById('youtubeStatus').textContent = 'Video processed successfully';
-            document.getElementById('youtubeStatus').className = 'small text-success mt-2';
-            
-            // Add to recent videos if not already there
-            if (!recentVideos.includes(url)) {
-                recentVideos.unshift(url);
-                if (recentVideos.length > 5) recentVideos.pop(); // Keep only 5 recent items
-                
-                // Update recent videos list
-                updateRecentList('recent-videos', recentVideos, (url) => {
-                    document.getElementById('youtubeUrl').value = url;
-                    document.getElementById('youtubeUrlForm').dispatchEvent(new Event('submit'));
-                });
-            }
-            
-            // Extract video ID for thumbnail
-            const videoId = data.video_id;
-            
-            // Display video info
-            document.getElementById('videoInfoContainer').classList.remove('d-none');
-            document.getElementById('videoTitle').textContent = "YouTube Video";
-            document.getElementById('videoChannel').textContent = "YouTube Channel";
-            document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-            document.getElementById('videoThumbnail').innerHTML = `
-                <img src="https://img.youtube.com/vi/${videoId}/0.jpg" alt="Video Thumbnail" class="img-fluid rounded">
-            `;
-            
-            // Display summary - safely handle the initial message
-            const initialMessage = document.getElementById('ytInitialMessage');
-            if (initialMessage) {
-                initialMessage.classList.add('d-none');
-            }
-            
-            // The summary already comes as HTML from the server now
-            document.getElementById('videoSummaryContainer').innerHTML = `
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h6 class="mb-0">Summary</h6>
-                    </div>
-                    <div class="card-body">
-                        ${data.summary}
-                    </div>
-                </div>
-            `;
-            
-            // Show actions
-            document.getElementById('summaryActionsForm').classList.remove('d-none');
-        })
-        .catch(error => {
-            submitBtn.innerHTML = originalBtnHTML;
-            submitBtn.disabled = false;
-            document.getElementById('youtubeStatus').textContent = 'Error: ' + error.message;
-            document.getElementById('youtubeStatus').className = 'small text-danger mt-2';
+            .catch(() => {
+              this.innerHTML = '<i class="fas fa-times me-1"></i> Failed';
+              setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
+              }, 2000);
+            });
         });
-    });
-    }
-
-    // Initialize database query form handling
-    function initDatabaseQueryForm() {
-    document.getElementById('dbQueryForm').addEventListener('submit', function(e) {
+      }
+      
+      if (document.getElementById('downloadBtn')) {
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+          const videoTitle = document.getElementById('videoTitle').textContent || 'YouTube Video';
+          const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
+          const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
+          
+          const element = document.createElement('a');
+          element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(summaryText));
+          element.setAttribute('download', `${videoTitle} - Summary.txt`);
+          element.style.display = 'none';
+          
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        });
+      }
+      
+      if (document.getElementById('regenerateBtn')) {
+        document.getElementById('regenerateBtn').addEventListener('click', async function() {
+          const url = document.getElementById('youtubeUrl').value;
+          const model = document.getElementById('ytAiModel').value;
+          
+          document.getElementById('videoSummaryContainer').innerHTML = `
+            <div class="text-center my-5">
+              <div class="spinner-border text-danger" role="status"></div>
+              <p class="mt-3">Regenerating summary...</p>
+            </div>
+          `;
+          
+          try {
+            const response = await fetch('/api/youtube-summary', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ youtube_url: url, model: model })
+            });
+            
+            const data = await response.json();
+            document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
+            document.getElementById('videoSummaryContainer').innerHTML = `
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0">Summary</h6>
+                </div>
+                <div class="card-body">
+                  ${data.summary}
+                </div>
+              </div>
+            `;
+          } catch (error) {
+            document.getElementById('videoSummaryContainer').innerHTML = `
+              <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Error: ${error.message}
+              </div>
+            `;
+          }
+        });
+      }
+    };
+    
+    // Initialize database query functionality
+    const initDatabaseQuery = () => {
+      const queryForm = document.getElementById('dbQueryForm');
+      if (!queryForm) return;
+      
+      queryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const questionInput = document.getElementById('dbQueryInput');
@@ -882,503 +911,292 @@
         // Show loading state
         const queryResults = document.getElementById('queryResults');
         queryResults.innerHTML = `
-            <div class="text-center my-5">
-                <div class="spinner-border text-success" role="status"></div>
-                <p class="mt-3">Processing your query...</p>
-            </div>
+          <div class="text-center my-5">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-3">Processing your query...</p>
+          </div>
         `;
         
-        // Send request to API
-        fetch('/api/text_to_sql', {
+        try {
+          const response = await fetch('/api/text_to_sql', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'question': question
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Display the results
-            queryResults.innerHTML = `
-                <div class="mb-3">
-                    <h6>SQL Query:</h6>
-                    <pre class="sql-code p-3">${data.query}</pre>
-                </div>
-                <div>
-                    <h6>Answer:</h6>
-                    <div class="p-3 bg-light rounded">
-                        ${data.answer}
-                    </div>
-                </div>
-            `;
-        })
-        .catch(error => {
-            queryResults.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Error: ${error.message}
-                </div>
-            `;
-        });
-    });
-    }
-
-    // Initialize YouTube summary action buttons
-    function initYoutubeSummaryActions() {
-    // Copy Summary Button
-    document.getElementById('copyBtn').addEventListener('click', function() {
-        // Extract the text content only (no HTML tags)
-        const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
-        const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
-        
-        navigator.clipboard.writeText(summaryText)
-            .then(() => {
-                this.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Failed to copy:', err);
-                this.innerHTML = '<i class="fas fa-times me-1"></i> Failed';
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Summary';
-                }, 2000);
-            });
-    });
-
-    // Download Summary Button
-    document.getElementById('downloadBtn').addEventListener('click', function() {
-        const videoTitle = document.getElementById('videoTitle').textContent || 'YouTube Video';
-        const summaryContainer = document.querySelector('#videoSummaryContainer .card-body');
-        const summaryText = summaryContainer ? summaryContainer.textContent.trim() : '';
-        
-        const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(summaryText));
-        element.setAttribute('download', `${videoTitle} - Summary.txt`);
-        element.style.display = 'none';
-        
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
-    });
-
-    // Regenerate Summary Button
-    document.getElementById('regenerateBtn').addEventListener('click', function() {
-        const url = document.getElementById('youtubeUrl').value;
-        const model = document.getElementById('ytAiModel').value;
-        
-        document.getElementById('videoSummaryContainer').innerHTML = `
-            <div class="text-center my-5">
-                <div class="spinner-border text-danger" role="status"></div>
-                <p class="mt-3">Regenerating summary...</p>
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ 'question': question })
+          });
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          queryResults.innerHTML = `
+            <div class="mb-3">
+              <h6>SQL Query:</h6>
+              <pre class="sql-code p-3">${data.query}</pre>
             </div>
-        `;
-        
-        fetch('/api/youtube-summary', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                youtube_url: url,
-                model: model,
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById('videoDuration').textContent = `Model: ${data.model}`;
-            document.getElementById('videoSummaryContainer').innerHTML = `
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h6 class="mb-0">Summary</h6>
-                    </div>
-                    <div class="card-body">
-                        ${data.summary}
-                    </div>
-                </div>
-            `;
-        })
-        .catch(error => {
-            document.getElementById('videoSummaryContainer').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Error: ${error.message}
-                </div>
-            `;
-        });
-    });
-    }
-
-    // Run initialization when the DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the UI
-    populateModels();
-
-    // Initialize form handlers
-    initWebsiteUrlForm();
-    initWebsiteChatForm();
-    initYoutubeUrlForm();
-    initDatabaseQueryForm();
-    initYoutubeSummaryActions();
-    });
-
-
-    let uploadedDocuments = [];
-
-    // Initialize document upload form handling
-    function initDocumentUploadForm() {
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('documentFile');
-        
+            <div>
+              <h6>Answer:</h6>
+              <div class="p-3 bg-light rounded">
+                ${data.answer}
+              </div>
+            </div>
+          `;
+        } catch (error) {
+          queryResults.innerHTML = `
+            <div class="alert alert-danger">
+              <i class="fas fa-exclamation-circle me-2"></i>
+              Error: ${error.message}
+            </div>
+          `;
+        }
+      });
+    };
+    
+    // Initialize document chat functionality
+    const initDocumentChat = () => {
+      // Document upload form
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('documentFile');
+      const uploadForm = document.getElementById('documentUploadForm');
+      
+      if (dropZone && fileInput) {
         // Click on drop zone to trigger file input
-        dropZone.addEventListener('click', () => {
-            fileInput.click();
-        });
+        dropZone.addEventListener('click', () => fileInput.click());
         
         // Handle drag and drop events
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
+          dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          });
         });
         
         // Add visual feedback for drag enter/leave
         dropZone.addEventListener('dragenter', () => {
-            dropZone.classList.add('border', 'border-primary');
+          dropZone.classList.add('border', 'border-primary');
         });
         
         dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border', 'border-primary');
+          dropZone.classList.remove('border', 'border-primary');
         });
         
         // Handle file drop
         dropZone.addEventListener('drop', (e) => {
-            dropZone.classList.remove('border', 'border-primary');
-            fileInput.files = e.dataTransfer.files;
+          dropZone.classList.remove('border', 'border-primary');
+          fileInput.files = e.dataTransfer.files;
         });
-        
-        // Handle form submission
-        document.getElementById('documentUploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const fileInput = document.getElementById('documentFile');
-            
-            if (!fileInput.files || fileInput.files.length === 0) {
-                document.getElementById('documentStatus').textContent = 'Please select a file to upload';
-                document.getElementById('documentStatus').className = 'small text-danger mt-2';
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            
-            // Validate file size (10MB max)
-            if (file.size > 10 * 1024 * 1024) {
-                document.getElementById('documentStatus').textContent = 'File size exceeds 10MB limit';
-                document.getElementById('documentStatus').className = 'small text-danger mt-2';
-                return;
-            }
-            
-            // Check file extension
-            const allowedExtensions = ['pdf', 'txt', 'docx'];
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-            
-            if (!allowedExtensions.includes(fileExtension)) {
-                document.getElementById('documentStatus').textContent = 'Only PDF, TXT, and DOCX files are supported';
-                document.getElementById('documentStatus').className = 'small text-danger mt-2';
-                return;
-            }
-            
-            // Show loading state
-            const uploadBtn = document.getElementById('uploadDocBtn');
-            const originalBtnHTML = uploadBtn.innerHTML;
-            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-            uploadBtn.disabled = true;
-            document.getElementById('documentStatus').textContent = 'Uploading and processing document...';
-            document.getElementById('documentStatus').className = 'small text-muted mt-2';
-            
-            // Create a FormData object to send the file
+      }
+      
+      // Handle document upload
+      if (uploadForm) {
+        uploadForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            utils.updateStatus('documentStatus', 'Please select a file to upload', false);
+            return;
+          }
+          
+          const file = fileInput.files[0];
+          
+          // Validate file size (10MB max)
+          if (file.size > 10 * 1024 * 1024) {
+            utils.updateStatus('documentStatus', 'File size exceeds 10MB limit', false);
+            return;
+          }
+          
+          // Check file extension
+          const allowedExtensions = ['pdf', 'txt', 'docx'];
+          const fileExtension = file.name.split('.').pop().toLowerCase();
+          
+          if (!allowedExtensions.includes(fileExtension)) {
+            utils.updateStatus('documentStatus', 'Only PDF, TXT, and DOCX files are supported', false);
+            return;
+          }
+          
+          // Show loading state
+          const uploadBtn = document.getElementById('uploadDocBtn');
+          const originalBtnHTML = uploadBtn.innerHTML;
+          utils.setLoading(uploadBtn, true);
+          utils.updateStatus('documentStatus', 'Uploading and processing document...', true);
+          
+          try {
             const formData = new FormData();
             formData.append('document', file);
             
-            // Send the file to the server
-            fetch('/api/upload-document', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Reset upload button
-                uploadBtn.innerHTML = originalBtnHTML;
-                uploadBtn.disabled = false;
-                
-                if (data.success) {
-                    document.getElementById('documentStatus').textContent = 'Document uploaded and processed successfully!';
-                    document.getElementById('documentStatus').className = 'small text-success mt-2';
-                    
-                    // Add to uploaded documents list
-                    if (!uploadedDocuments.includes(data.document_name)) {
-                        uploadedDocuments.push(data.document_name);
-                        
-                        // Update uploaded documents list
-                        updateUploadedDocumentsList();
-                    }
-                    
-                    // Update current documents display
-                    updateCurrentDocumentsDisplay();
-                    
-                    // Clear file input
-                    fileInput.value = '';
-                    
-                    // Enable chat interface
-                    document.getElementById('docMessageInput').disabled = false;
-                    document.getElementById('docChatForm').querySelector('button').disabled = false;
-                    
-                    // Clear the chat container
-                    const chatContainer = document.getElementById('docChatContainer');
-                    chatContainer.innerHTML = '';
-                    
-                    // Add welcome message
-                    const botMessageDiv = document.createElement('div');
-                    botMessageDiv.className = 'bot-message';
-                    botMessageDiv.innerHTML = `
-                        <p class="mb-0">Document "${data.document_name}" has been processed. What would you like to know about it?</p>
-                    `;
-                    chatContainer.appendChild(botMessageDiv);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                } else {
-                    document.getElementById('documentStatus').textContent = data.error || 'Unknown error';
-                    document.getElementById('documentStatus').className = 'small text-danger mt-2';
-                }
-            })
-            .catch(error => {
-                uploadBtn.innerHTML = originalBtnHTML;
-                uploadBtn.disabled = false;
-                document.getElementById('documentStatus').textContent = 'Error: ' + error.message;
-                document.getElementById('documentStatus').className = 'small text-danger mt-2';
+            const response = await fetch('/api/upload-document', {
+              method: 'POST',
+              body: formData
             });
+            
+            const data = await response.json();
+            utils.setLoading(uploadBtn, false, originalBtnHTML);
+            
+            if (data.success) {
+              utils.updateStatus('documentStatus', 'Document uploaded and processed successfully!', true);
+              
+              // Update state
+              if (!state.uploadedDocuments.includes(data.document_name)) {
+                state.uploadedDocuments.push(data.document_name);
+                updateDocumentsList();
+              }
+              
+              // Enable chat interface
+              document.getElementById('docMessageInput').disabled = false;
+              document.getElementById('docChatForm').querySelector('button').disabled = false;
+              
+              // Add welcome message
+              const chatContainer = document.getElementById('docChatContainer');
+              chatContainer.innerHTML = '';
+              utils.addChatMessage(chatContainer, 
+                `<p class="mb-0">Document "${data.document_name}" has been processed. What would you like to know about it?</p>`
+              );
+              
+              // Clear file input
+              fileInput.value = '';
+            } else {
+              utils.updateStatus('documentStatus', data.error || 'Unknown error', false);
+            }
+          } catch (error) {
+            utils.setLoading(uploadBtn, false, originalBtnHTML);
+            utils.updateStatus('documentStatus', 'Error: ' + error.message, false);
+          }
         });
-    }
-    
-    // Update uploaded documents list
-    function updateUploadedDocumentsList() {
+      }
+      
+      // Update document lists
+      const updateDocumentsList = () => {
+        // Update uploaded documents list
         const container = document.querySelector('.uploaded-documents');
-        
-        if (uploadedDocuments.length === 0) {
+        if (container) {
+          if (state.uploadedDocuments.length === 0) {
             container.innerHTML = '<p class="text-muted small">No documents uploaded</p>';
-            return;
-        }
-        
-        let html = '';
-        uploadedDocuments.forEach(document => {
-            html += `
+          } else {
+            let html = '';
+            state.uploadedDocuments.forEach(document => {
+              html += `
                 <div class="list-group-item d-flex justify-content-between align-items-center py-2">
-                    <span class="text-truncate" title="${document}">
-                        <i class="fas fa-file me-2"></i> ${document}
-                    </span>
+                  <span class="text-truncate" title="${document}">
+                    <i class="fas fa-file me-2"></i> ${document}
+                  </span>
                 </div>
-            `;
-        });
+              `;
+            });
+            container.innerHTML = html;
+          }
+        }
         
-        container.innerHTML = html;
-    }
-    
-    // Update current documents display
-    function updateCurrentDocumentsDisplay() {
+        // Update current documents display
         const currentDocumentsEl = document.getElementById('currentDocuments');
-        
-        if (uploadedDocuments.length === 0) {
+        if (currentDocumentsEl) {
+          if (state.uploadedDocuments.length === 0) {
             currentDocumentsEl.textContent = 'No documents uploaded';
-            return;
+          } else if (state.uploadedDocuments.length === 1) {
+            currentDocumentsEl.textContent = `Current document: ${state.uploadedDocuments[0]}`;
+          } else {
+            currentDocumentsEl.textContent = `${state.uploadedDocuments.length} documents uploaded`;
+          }
         }
-        
-        if (uploadedDocuments.length === 1) {
-            currentDocumentsEl.textContent = `Current document: ${uploadedDocuments[0]}`;
-        } else {
-            currentDocumentsEl.textContent = `${uploadedDocuments.length} documents uploaded`;
-        }
-    }
-    
-    // Initialize document chat form handling
-    function initDocChatForm() {
-        document.getElementById('docChatForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const messageInput = document.getElementById('docMessageInput');
-            const message = messageInput.value.trim();
-            
-            if (!message || uploadedDocuments.length === 0) return;
-            
+      };
+      
+      // Document chat form
+      const chatForm = document.getElementById('docChatForm');
+      if (chatForm) {
+        chatForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const messageInput = document.getElementById('docMessageInput');
+          const message = messageInput.value.trim();
+          
+          if (!message || state.uploadedDocuments.length === 0) return;
+          
+          // Add user message
+          const chatContainer = document.getElementById('docChatContainer');
+          utils.addChatMessage(chatContainer, message, true);
+          messageInput.value = '';
+          
+          // Add loading indicator
+          const loadingDiv = utils.addChatMessage(chatContainer, 
+            '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Thinking...'
+          );
+          
+          try {
             const model = document.getElementById('docAiModel').value;
-            
-            // Add user message to chat
-            const chatContainer = document.getElementById('docChatContainer');
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'user-message';
-            userMessageDiv.textContent = message;
-            chatContainer.appendChild(userMessageDiv);
-            
-            // Clear input
-            messageInput.value = '';
-            
-            // Add loading indicator
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'bot-message';
-            loadingDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Thinking...';
-            chatContainer.appendChild(loadingDiv);
-            
-            // Scroll to bottom
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            // Send request to API
-            fetch('/api/chat-with-document', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    question: message,
-                    model: model
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Remove loading indicator
-                chatContainer.removeChild(loadingDiv);
-                
-                // Add bot response
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'bot-message';
-                botMessageDiv.innerHTML = data.answer;
-                chatContainer.appendChild(botMessageDiv);
-                
-                // Scroll to bottom
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            })
-            .catch(error => {
-                // Remove loading indicator
-                chatContainer.removeChild(loadingDiv);
-                
-                // Add error message
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'bot-message';
-                errorDiv.innerHTML = `<p class="text-danger mb-0">Error: ${error.message}</p>`;
-                chatContainer.appendChild(errorDiv);
-                
-                // Scroll to bottom
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+            const response = await fetch('/api/chat-with-document', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                question: message,
+                model: model
+              })
             });
+            
+            const data = await response.json();
+            chatContainer.removeChild(loadingDiv);
+            utils.addChatMessage(chatContainer, data.answer);
+          } catch (error) {
+            chatContainer.removeChild(loadingDiv);
+            utils.addChatMessage(chatContainer, `<p class="text-danger mb-0">Error: ${error.message}</p>`);
+          }
         });
-    }
-    
-    // Initialize clear documents button
-    function initClearDocumentsButton() {
-        document.getElementById('clearDocsBtn').addEventListener('click', function() {
-            if (uploadedDocuments.length === 0) {
-                return;
+      }
+      
+      // Clear documents button
+      const clearBtn = document.getElementById('clearDocsBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', async function() {
+          if (state.uploadedDocuments.length === 0) return;
+          
+          if (!confirm('Are you sure you want to clear all uploaded documents? This action cannot be undone.')) {
+            return;
+          }
+          
+          utils.setLoading(this, true);
+          
+          try {
+            const response = await fetch('/api/clear-documents', { method: 'POST' });
+            const data = await response.json();
+            
+            utils.setLoading(this, false, '<i class="fas fa-trash me-1"></i> Clear All Documents');
+            
+            if (data.success) {
+              state.uploadedDocuments = [];
+              updateDocumentsList();
+              
+              // Reset chat interface
+              document.getElementById('docMessageInput').disabled = true;
+              document.getElementById('docChatForm').querySelector('button').disabled = true;
+              
+              // Clear chat container
+              document.getElementById('docChatContainer').innerHTML = `
+                <div class="text-center my-5 text-muted" id="docInitialMessage">
+                  <i class="fas fa-file-alt fa-3x mb-3"></i>
+                  <p>Upload a document to start chatting</p>
+                </div>
+              `;
+              
+              utils.updateStatus('documentStatus', 'All documents cleared successfully', true);
+            } else {
+              utils.updateStatus('documentStatus', data.error || 'Unknown error', false);
             }
-            
-            if (!confirm('Are you sure you want to clear all uploaded documents? This action cannot be undone.')) {
-                return;
-            }
-            
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
-            
-            fetch('/api/clear-documents', {
-                method: 'POST'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-trash me-1"></i> Clear All Documents';
-                
-                if (data.success) {
-                    uploadedDocuments = [];
-                    updateUploadedDocumentsList();
-                    updateCurrentDocumentsDisplay();
-                    
-                    // Reset chat interface
-                    document.getElementById('docMessageInput').disabled = true;
-                    document.getElementById('docChatForm').querySelector('button').disabled = true;
-                    
-                    // Clear the chat container and show initial message
-                    document.getElementById('docChatContainer').innerHTML = `
-                        <div class="text-center my-5 text-muted" id="docInitialMessage">
-                            <i class="fas fa-file-alt fa-3x mb-3"></i>
-                            <p>Upload a document to start chatting</p>
-                        </div>
-                    `;
-                    
-                    // Show success message
-                    document.getElementById('documentStatus').textContent = 'All documents cleared successfully';
-                    document.getElementById('documentStatus').className = 'small text-success mt-2';
-                } else {
-                    document.getElementById('documentStatus').textContent = data.error || 'Unknown error';
-                    document.getElementById('documentStatus').className = 'small text-danger mt-2';
-                }
-            })
-            .catch(error => {
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-trash me-1"></i> Clear All Documents';
-                document.getElementById('documentStatus').textContent = 'Error: ' + error.message;
-                document.getElementById('documentStatus').className = 'small text-danger mt-2';
-            });
+          } catch (error) {
+            utils.setLoading(this, false, '<i class="fas fa-trash me-1"></i> Clear All Documents');
+            utils.updateStatus('documentStatus', 'Error: ' + error.message, false);
+          }
         });
-    }
+      }
+    };
     
-    // Add to initialization when the DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        // Previous initialization code...
-        
-        // Populate the document chat model dropdown
-        const docModelSelect = document.getElementById('docAiModel');
-        docModelSelect.innerHTML = '';
-        MODELS.forEach(model => {
-            const docOption = document.createElement('option');
-            docOption.value = model.id;
-            docOption.textContent = model.name;
-            if (model.id === 'deepseek') docOption.selected = true;
-            docModelSelect.appendChild(docOption);
-        });
-        
-        // Initialize document chat functionality
-        initDocumentUploadForm();
-        initDocChatForm();
-        initClearDocumentsButton();
-    });
+    // Initialize all components
+    initModelDropdowns();
+    initWebsiteChat();
+    initYoutubeSummarizer();
+    initDatabaseQuery();
+    initDocumentChat();
+  });
+
+
     </script>
           
         </body>
