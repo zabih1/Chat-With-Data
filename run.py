@@ -225,6 +225,7 @@ def speech_to_text_api():
         file.save(file_path)
         
         transcript = speech_to_text(str(file_path))
+        print(transcript)
         
         # Clean up the temporary file
         if os.path.exists(file_path):
