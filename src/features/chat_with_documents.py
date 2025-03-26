@@ -82,44 +82,32 @@ def chat_with_document(question, model_name='deepseek'):
         print(traceback.format_exc())
         raise Exception(f"Error in chat_with_document: {str(e)}")
 
+
+
 def clear_documents():
+    vector_db = load_vector_database(db_type="document")
+    
+    if vector_db and hasattr(vector_db, '_collection'):
+        all_ids = vector_db.get()['ids']
+        
+        if all_ids:
+            vector_db._collection.delete(all_ids)
+            print(f"Successfully deleted {len(all_ids)} documents from vector database.")
+    
+    # Add document removal from uploads folder
     try:
         base_dir = Path(__file__).parent.parent.parent
-        persist_directory = os.path.join(base_dir, "data", "chroma_db_document")
-        
-        # Create data directory if it doesn't exist
-        os.makedirs(os.path.join(base_dir, "data"), exist_ok=True)
-        
-        # Handle vector database directory
-        if os.path.exists(persist_directory):
-            try:
-                shutil.rmtree(persist_directory)
-            except Exception as e:
-                print(f"Error removing directory: {e}")
-                # Try removing files individually if full delete fails
-                for root, dirs, files in os.walk(persist_directory, topdown=False):
-                    for file in files:
-                        try:
-                            os.remove(os.path.join(root, file))
-                        except Exception:
-                            pass
-        
-        # Recreate directory
-        os.makedirs(persist_directory, exist_ok=True)
-        
-        # Only delete document files from uploads, not system files
         uploads_dir = os.path.join(base_dir, "uploads")
+        
         if os.path.exists(uploads_dir):
             for file in os.listdir(uploads_dir):
                 file_path = os.path.join(uploads_dir, file)
-                # Skip app-init.py and non-document files
-                if file in ["app-init.py"] or not file.lower().endswith(('.pdf', '.docx', '.txt', '.md')):
-                    continue
                 try:
                     if os.path.isfile(file_path):
                         os.unlink(file_path)
-                except Exception:
-                    pass
+                        print(f"Deleted file: {file_path}")
+                except Exception as e:
+                    print(f"Error deleting file {file_path}: {e}")
         
         return {
             'success': True,
