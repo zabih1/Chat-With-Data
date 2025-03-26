@@ -11,6 +11,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 
 from llama_cloud_services import LlamaParse
+from groq import Groq
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -82,8 +84,6 @@ def chat_with_document(question, model_name='deepseek'):
         print(traceback.format_exc())
         raise Exception(f"Error in chat_with_document: {str(e)}")
 
-
-
 def clear_documents():
     vector_db = load_vector_database(db_type="document")
     
@@ -121,3 +121,18 @@ def clear_documents():
             'success': False,
             'error': str(e)
         }
+    
+
+client = Groq()
+
+def speech_to_text(audio_path):
+
+    with open(audio_path, "rb") as audio_file:
+        transcript = client.audio.transcriptions.create(
+            model="whisper-large-v3",
+            file=audio_file
+        )
+
+        return transcript.text
+    
+    
