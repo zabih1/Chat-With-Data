@@ -15,7 +15,7 @@ from src.features.chat_with_documents import speech_to_text
 from config import MODELS, get_model_display_name
 from config import DATABASE_URI
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.urandom(24)  
 
 @app.route('/', methods=['GET'])
