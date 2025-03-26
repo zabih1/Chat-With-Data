@@ -10,6 +10,8 @@ from src.features.youtube_video_summary import extract_video_id, generate_summar
 from src.features.chat_with_website import prepare_website_data, chat_with_website
 from src.features.text_to_sql import write_query, execute_query, generate_answer
 from src.features.chat_with_documents import chat_with_document, load_document, clear_documents
+from src.features.chat_with_documents import speech_to_text
+
 from config import MODELS, get_model_display_name
 from config import DATABASE_URI
 
@@ -204,6 +206,39 @@ def clear_documents_api():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/speech-to-text', methods=['POST'])
+def speech_to_text_api():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        file = request.files['audio']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Save the audio file temporarily
+        upload_dir = Path(__file__).parent / 'uploads' / 'temp'
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = upload_dir / file.filename
+        file.save(file_path)
+        
+        transcript = speech_to_text(str(file_path))
+        
+        # Clean up the temporary file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        return jsonify({
+            'success': True,
+            'transcript': transcript
+        })
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
