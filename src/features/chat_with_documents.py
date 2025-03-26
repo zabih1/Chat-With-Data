@@ -82,9 +82,7 @@ def chat_with_document(question, model_name='deepseek'):
         print(traceback.format_exc())
         raise Exception(f"Error in chat_with_document: {str(e)}")
 
-
 def clear_documents():
-    """Clear all uploaded documents and vector database."""
     try:
         base_dir = Path(__file__).parent.parent.parent
         persist_directory = os.path.join(base_dir, "data", "chroma_db_document")
@@ -109,16 +107,19 @@ def clear_documents():
         # Recreate directory
         os.makedirs(persist_directory, exist_ok=True)
         
-        # Delete all files in the uploads directory
+        # Only delete document files from uploads, not system files
         uploads_dir = os.path.join(base_dir, "uploads")
         if os.path.exists(uploads_dir):
             for file in os.listdir(uploads_dir):
                 file_path = os.path.join(uploads_dir, file)
+                # Skip app-init.py and non-document files
+                if file in ["app-init.py"] or not file.lower().endswith(('.pdf', '.docx', '.txt', '.md')):
+                    continue
                 try:
                     if os.path.isfile(file_path):
                         os.unlink(file_path)
-                except Exception as e:
-                    print(f"Error deleting {file_path}: {e}")
+                except Exception:
+                    pass
         
         return {
             'success': True,
