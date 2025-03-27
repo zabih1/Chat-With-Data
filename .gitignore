@@ -172,7 +172,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-Notebook/
 data/
 chroma_db_document/
 chroma_db_website/

@@ -56,16 +56,13 @@ def load_document(file_path):
 def chat_with_document(question, model_name='deepseek'):
     """Process a question against loaded documents."""
     try:
-        # Load the vector database
         vector_db = load_vector_database()
         
         if not vector_db:
             return "No documents have been uploaded yet. Please upload a document first."
         
-        # Create prompt and retriever
         prompt = ChatPromptTemplate.from_template(DOCUMENT_CHAT_TEMPLATE)
         retriever = vector_db.as_retriever(search_kwargs={"k": 4})
-        
         llm = get_llm(model_name)
         
         # Create and execute the RAG chain
@@ -83,6 +80,8 @@ def chat_with_document(question, model_name='deepseek'):
         import traceback
         print(traceback.format_exc())
         raise Exception(f"Error in chat_with_document: {str(e)}")
+
+
 
 def clear_documents():
     vector_db = load_vector_database(db_type="document")
@@ -123,10 +122,11 @@ def clear_documents():
         }
     
 
+
+
 client = Groq()
 
 def speech_to_text(audio_path):
-
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="whisper-large-v3",

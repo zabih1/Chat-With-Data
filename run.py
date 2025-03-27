@@ -18,10 +18,12 @@ from config import DATABASE_URI
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.urandom(24)  
 
+# ============= Serves the main application homepage with available models ===============
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html', models=MODELS)
 
+# ============= Generates summaries from YouTube videos using AI models ===============
 @app.route('/api/youtube-summary', methods=['POST'])
 def youtube_summary_api():
     data = request.get_json()
@@ -38,6 +40,7 @@ def youtube_summary_api():
         'model': model
     })
 
+# ============= Crawls and processes website content for later Q&A ===============
 @app.route('/api/prepare-website', methods=['POST'])
 def prepare_website_api():
     data = request.get_json()
@@ -51,6 +54,7 @@ def prepare_website_api():
         'website_url': website_url
     })
 
+# ============= Answers questions about previously processed website content ===============
 @app.route('/api/chat-with-website', methods=['POST'])
 def chat_with_website_api():
     data = request.get_json()
@@ -67,6 +71,7 @@ def chat_with_website_api():
         'model_used': get_model_display_name(model_name)
     })
 
+# ============= Translates natural language to SQL, executes queries, and returns results ===============
 @app.route("/api/text_to_sql", methods=["POST"])
 def text_to_sql_api():
     state = {"question": "", "query": "", "result": "", "answer": "", "db_uri": DATABASE_URI}
@@ -84,6 +89,7 @@ def text_to_sql_api():
 
     return jsonify(state)
 
+# ============= Uploads and processes documents for later Q&A interactions ===============
 @app.route('/api/upload-document', methods=['POST'])
 def upload_document_api():
     file = request.files['document']
@@ -102,6 +108,7 @@ def upload_document_api():
         'document_name': file.filename
     })
 
+# ============= Answers questions about previously uploaded documents ===============
 @app.route('/api/chat-with-document', methods=['POST'])
 def chat_with_document_api():
     data = request.get_json()
@@ -116,6 +123,7 @@ def chat_with_document_api():
         'model_used': get_model_display_name(model_name)
     })
 
+# ============= Removes all uploaded documents from memory ===============
 @app.route('/api/clear-documents', methods=['POST'])
 def clear_documents_api():
     result = clear_documents()
@@ -125,6 +133,7 @@ def clear_documents_api():
         'message': 'Documents cleared successfully'
     })
 
+# ============= Converts audio recordings to text transcripts ===============
 @app.route('/api/speech-to-text', methods=['POST'])
 def speech_to_text_api():
     file = request.files['audio']
@@ -145,6 +154,7 @@ def speech_to_text_api():
         'transcript': transcript
     })
 
+# ============= Retrieves database schema information for SQL generation ===============
 @app.route("/api/database_tables", methods=["GET"])
 def database_tables_api():
     from src.features.text_to_sql import SQLDatabase
