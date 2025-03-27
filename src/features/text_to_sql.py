@@ -46,10 +46,11 @@ def write_query(state: State) -> dict:
         "input": state["question"],
             })
         
-        llm = get_llm("deepseek")
+        llm = get_llm("llama")
 
         structured_llm = llm.with_structured_output(QueryOutput)
         result = structured_llm.invoke(prompt)
+        print(result['query'])
         return {"query": result["query"]}
         
          

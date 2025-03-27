@@ -1164,6 +1164,57 @@
     });
 
 
+
+              // Add this to the beginning of the initDatabaseQuery function
+          const fetchDatabaseTables = async () => {
+            const tableList = document.querySelector('.table-list');
+            if (!tableList) return;
+            
+            tableList.innerHTML = `
+                <div class="text-center py-2">
+                    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                    <p class="small mb-0 mt-2">Loading tables...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/database_tables');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.tables || data.tables.length === 0) {
+                    tableList.innerHTML = '<p class="text-muted small">No tables found in database</p>';
+                    return;
+                }
+                
+                let html = '';
+                data.tables.forEach(table => {
+                    html += `
+                        <a href="#" class="list-group-item list-group-item-action small py-2">
+                            <i class="fas fa-table me-2"></i>${table}
+                        </a>
+                    `;
+                });
+                tableList.innerHTML = html;
+                
+                // Add click handlers for table items
+                tableList.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const tableName = e.target.textContent.trim();
+                        document.getElementById('dbQueryInput').value = `Show me data from the ${tableName} table`;
+                    });
+                });
+            } catch (error) {
+                tableList.innerHTML = `<p class="text-danger small">Error: ${error.message}</p>`;
+            }
+          };
+
+          // Call fetchDatabaseTables when the database tab is shown
+          document.querySelector('a[data-bs-target="#databaseTab"]').addEventListener('shown.bs.tab', fetchDatabaseTables);
     </script>
           
         </body>
