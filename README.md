@@ -2,6 +2,9 @@
 
 A comprehensive application for interacting with various data sources using conversational AI.
 
+
+📽️ [Watch the demo video on Google Drive](https://drive.google.com/file/d/1j7f7FHw9Gs2nieY6tzm4I5w9xDWKBIIw/view?usp=sharing)
+
 ## Features
 
 - **Chat with Documents** - Upload and chat with your documents (PDF, DOCX, TXT, etc.)
