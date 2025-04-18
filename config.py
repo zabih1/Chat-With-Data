@@ -7,8 +7,6 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY")
-WEAVIATE_URL = os.getenv("WEAVIATE_URL")
 LLAMA_PARSER_API = os.getenv("LLAMA_PARSER_API")
 
 # 📌 Database Config
