@@ -10,14 +10,13 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, RecursiveUrlLoader
 
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 
 from src.core.vector_store import split_content, setup_vector_database, load_vector_database
 
 from src.core.prompts import WEBSITE_CHAT_TEMPLATE
 from src.core.llm import get_llm
-
 
 def scrape_website_content(website_url):
 
