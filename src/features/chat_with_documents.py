@@ -9,19 +9,20 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
-from config import GEMINI_API_KEY, GROQ_API_KEY
 
 from llama_cloud_services import LlamaParse
 from groq import Groq
 
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 
 # Import from core modules
 from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
 from src.core.llm import get_llm
 from src.core.vector_store import split_content, setup_vector_database, load_vector_database
 from config import LLAMA_PARSER_API
+from config import GEMINI_API_KEY, GROQ_API_KEY
 
 def load_document(file_path):
     """Load and process a document file."""
