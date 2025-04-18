@@ -5,7 +5,7 @@ gunicorn
 nest_asyncio
 beautifulsoup4
 llama_cloud_services
-
+markdown
 
 langchain
 langchain-google-genai
