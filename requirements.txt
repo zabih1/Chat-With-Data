@@ -6,6 +6,7 @@ nest_asyncio
 beautifulsoup4
 llama_cloud_services
 markdown
+pymysql
 
 langchain
 langchain-google-genai

@@ -21,13 +21,14 @@ sys.path.append(project_root)
 from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
 from src.core.llm import get_llm
 from src.core.vector_store import split_content, setup_vector_database, load_vector_database
-from config import LLAMA_PARSER_API
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
+LLAMA_PARSER_API = os.getenv("LLAMA_PARSER_API")
 
 
 def load_document(file_path):
