@@ -23,6 +23,8 @@ from src.core.llm import get_llm
 from src.core.vector_store import split_content, setup_vector_database, load_vector_database
 from config import LLAMA_PARSER_API, GROQ_API_KEY
 
+from config import GEMINI_API_KEY, GROQ_API_KEY
+
 def load_document(file_path):
     """Load and process a document file."""
     try:
