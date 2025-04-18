@@ -21,9 +21,14 @@ sys.path.append(project_root)
 from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
 from src.core.llm import get_llm
 from src.core.vector_store import split_content, setup_vector_database, load_vector_database
-from config import LLAMA_PARSER_API, GROQ_API_KEY
+from config import LLAMA_PARSER_API
+from dotenv import load_dotenv
 
-from config import GEMINI_API_KEY, GROQ_API_KEY
+load_dotenv()
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+
 
 def load_document(file_path):
     """Load and process a document file."""
