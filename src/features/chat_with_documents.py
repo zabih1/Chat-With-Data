@@ -9,6 +9,7 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
+from config import GEMINI_API_KEY, GROQ_API_KEY
 
 from llama_cloud_services import LlamaParse
 from groq import Groq
@@ -124,7 +125,7 @@ def clear_documents():
 
 
 
-client = Groq()
+client = Groq(api_key=GROQ_API_KEY)
 
 def speech_to_text(audio_path):
     with open(audio_path, "rb") as audio_file:
