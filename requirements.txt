@@ -1,10 +1,10 @@
 flask
-markdown
 python-dotenv
 youtube-transcript-api
 gunicorn
 nest_asyncio
 beautifulsoup4
+llama_cloud_services
 
 
 langchain
