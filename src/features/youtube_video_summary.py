@@ -11,20 +11,16 @@ sys.path.append(project_root)
 
 from src.core.prompts import YOUTUBE_SUMMARY_TEMPLATE
 from src.core.llm import get_llm
-from dotenv import load_dotenv
 import os
-load_dotenv()
 
-PROXY_USERNAME = os.getenv("PROXY_USERNAME")
-PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 def get_video_transcript(video_id):
 
     # ytt_api = YouTubeTranscriptApi()
 
     ytt_api = YouTubeTranscriptApi(
     proxy_config=WebshareProxyConfig(
-        proxy_username=PROXY_USERNAME,
-        proxy_password=PROXY_PASSWORD,
+        proxy_username="zdvzltzb",
+        proxy_password="by7xjzhcw471",
     ))
     
     transcript = ytt_api.fetch(video_id)
