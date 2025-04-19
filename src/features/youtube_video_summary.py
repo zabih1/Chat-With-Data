@@ -5,12 +5,14 @@ import os
 import re
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.core.prompts import YOUTUBE_SUMMARY_TEMPLATE
 from src.core.llm import get_llm
 from config import PROXY_PASSWORD, PROXY_USERNAME
+
 def get_video_transcript(video_id):
 
     # ytt_api = YouTubeTranscriptApi()
