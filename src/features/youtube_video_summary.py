@@ -3,6 +3,8 @@ from langchain.prompts import PromptTemplate
 import sys
 import os
 import re
+from youtube_transcript_api.proxies import WebshareProxyConfig
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -11,7 +13,13 @@ from src.core.llm import get_llm
 
 def get_video_transcript(video_id):
 
-    ytt_api = YouTubeTranscriptApi()
+    # ytt_api = YouTubeTranscriptApi()
+
+    ytt_api = YouTubeTranscriptApi(
+    proxy_config=WebshareProxyConfig(
+        proxy_username="zdvzltzb",
+        proxy_password="by7xjzhcw471",
+    ))
     
 
     transcript = ytt_api.fetch(video_id)
