@@ -17,6 +17,9 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 PORT = int(os.getenv("PORT", 5000))
 HOST = os.getenv("HOST", "0.0.0.0")
 
+# proxy for the youtube video summary.
+PROXY_USERNAME = os.getenv("PROXY_USERNAME")
+PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 
 # 📌 Vector Database Settings
 CHROMA_PERSIST_DIRECTORY = "./data/chroma_db"
