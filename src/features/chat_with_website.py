@@ -13,7 +13,7 @@ from langchain_community.document_loaders import SitemapLoader, WebBaseLoader, R
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
 
-from src.core.vector_store import split_content, setup_vector_database, load_vector_database
+from src.core.vector_store import split_content, setup_vector_database, load_vector_database, clear_vector_database
 
 from src.core.prompts import WEBSITE_CHAT_TEMPLATE
 from src.core.llm import get_llm
@@ -73,8 +73,10 @@ def scrape_website_content(website_url):
 
 
 def prepare_website_data(website_url):
-
     try:
+        # Clear any existing website data first
+        clear_vector_database(db_type="website")
+        
         documents = scrape_website_content(website_url)
         if not documents:
             return {'success': False, 'error': 'Failed to scrape website content'}
@@ -98,7 +100,6 @@ def prepare_website_data(website_url):
 
 
 def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
-
     prompt = ChatPromptTemplate.from_template(WEBSITE_CHAT_TEMPLATE)
     
     vector_db = session_data.get('vector_db')
@@ -122,6 +123,9 @@ def create_rag_chain_with_prepared_data(session_data, model_name='llama'):
 def chat_with_website(website_url, question, model_name='deepseek'):
     try:
         vector_db = load_vector_database(db_type="website")
+        
+        if not vector_db:
+            return "Website content has not been processed yet. Please prepare the website data first."
         
         prompt = ChatPromptTemplate.from_template(WEBSITE_CHAT_TEMPLATE)
         retriever = vector_db.as_retriever(search_kwargs={"k": 5})

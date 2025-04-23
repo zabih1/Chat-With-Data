@@ -21,11 +21,9 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PROXY_USERNAME = os.getenv("PROXY_USERNAME")
 PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 
-# 📌 Vector Database Settings
-CHROMA_PERSIST_DIRECTORY = "./data/chroma_db"
+# 📌 Vector Embedding Settings
 DOCUMENT_CHUNK_SIZE = 1000
 DOCUMENT_CHUNK_OVERLAP = 200
-
 
 # 📌 Model Settings
 MODELS = [
@@ -39,4 +37,4 @@ def get_model_display_name(model_id):
     for model in MODELS:
         if model["id"] == model_id:
             return model["name"]
-    return model_id  
+    return model_id

@@ -20,7 +20,7 @@ sys.path.append(project_root)
 # Import from core modules
 from src.core.prompts import DOCUMENT_CHAT_TEMPLATE
 from src.core.llm import get_llm
-from src.core.vector_store import split_content, setup_vector_database, load_vector_database
+from src.core.vector_store import split_content, setup_vector_database, load_vector_database, clear_vector_database
 
 from dotenv import load_dotenv
 
@@ -91,16 +91,9 @@ def chat_with_document(question, model_name='deepseek'):
         raise Exception(f"Error in chat_with_document: {str(e)}")
 
 
-
 def clear_documents():
-    vector_db = load_vector_database(db_type="document")
-    
-    if vector_db and hasattr(vector_db, '_collection'):
-        all_ids = vector_db.get()['ids']
-        
-        if all_ids:
-            vector_db._collection.delete(all_ids)
-            print(f"Successfully deleted {len(all_ids)} documents from vector database.")
+    # Clear the in-memory vector database
+    clear_vector_database(db_type="document")
     
     # Add document removal from uploads folder
     try:
@@ -129,8 +122,6 @@ def clear_documents():
             'success': False,
             'error': str(e)
         }
-    
-
 
 
 client = Groq(api_key=GROQ_API_KEY)
@@ -143,5 +134,3 @@ def speech_to_text(audio_path):
         )
 
         return transcript.text
-    
-    
